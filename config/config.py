@@ -10,7 +10,7 @@ import torch
 
 ########################################################### Repository's Names ###########################################################
 AUTHOR = "Hongnan G."
-REPO = "reighns_cassava"
+REPO = "reighns_pytorch_pipeline"
 
 ########################################################### Torch Device ###########################################################
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -32,12 +32,13 @@ BLOB_STORE = Path(STORES_DIR, "blob")
 FEATURE_STORE = Path(STORES_DIR, "feature")
 MODEL_REGISTRY = Path(STORES_DIR, "model")
 TENSORBOARD = Path(STORES_DIR, "tensorboard")
+WANDB_DIR = Path(STORES_DIR, "wandb")
 
-# Data folders
-RAW_DATA_DIR = Path(DATA_DIR, "raw")
-PROCESSED_DATA_DIR = Path(DATA_DIR, "processed")
-TRAIN_DATA_DIR = Path(DATA_DIR, "train")
-TEST_DATA_DIR = Path(DATA_DIR, "test")
+# Data folders # TODO: Uncomment if init a new project, otherwise, comment out as I want to put many competition data in the same folder.
+# RAW_DATA_DIR = Path(DATA_DIR, "raw")
+# PROCESSED_DATA_DIR = Path(DATA_DIR, "processed")
+# TRAIN_DATA_DIR = Path(DATA_DIR, "train")
+# TEST_DATA_DIR = Path(DATA_DIR, "test")
 
 
 # Create dirs
@@ -49,10 +50,12 @@ STORES_DIR.mkdir(parents=True, exist_ok=True)
 BLOB_STORE.mkdir(parents=True, exist_ok=True)
 FEATURE_STORE.mkdir(parents=True, exist_ok=True)
 MODEL_REGISTRY.mkdir(parents=True, exist_ok=True)
-RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
-PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
-TRAIN_DATA_DIR.mkdir(parents=True, exist_ok=True)
-TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
+WANDB_DIR.mkdir(parents=True, exist_ok=True)
+# TODO: Uncomment if init a new project, otherwise, comment out as I want to put many competition data in the same folder.
+# RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
+# PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
+# TRAIN_DATA_DIR.mkdir(parents=True, exist_ok=True)
+# TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # new folder
 TENSORBOARD.mkdir(parents=True, exist_ok=True)
 

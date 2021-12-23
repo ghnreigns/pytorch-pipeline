@@ -1,28 +1,40 @@
 from dataclasses import dataclass, field, asdict
 import pandas as pd
 import pathlib
-from typing import Any, Dict, List, Union
+from typing import Any, Dict, List
 from config import config
 import wandb
-import torch
 
 
 @dataclass
 class FilePaths:
     """Class to keep track of the files."""
 
-    train_images: pathlib.Path = pathlib.Path(config.DATA_DIR, "train")
-    test_images: pathlib.Path = pathlib.Path(config.DATA_DIR, "test")
-    train_csv: pathlib.Path = pathlib.Path(config.DATA_DIR, "raw/train.csv")
-    test_csv: pathlib.Path = pathlib.Path(config.DATA_DIR, "raw/test.csv")
+    train_images: pathlib.Path = pathlib.Path(
+        config.DATA_DIR, "cassava_leaf_disease_classification/train"
+    )
+    test_images: pathlib.Path = pathlib.Path(
+        config.DATA_DIR, "cassava_leaf_disease_classification/test"
+    )
+    train_csv: pathlib.Path = pathlib.Path(
+        config.DATA_DIR, "cassava_leaf_disease_classification/raw/train.csv"
+    )
+    test_csv: pathlib.Path = pathlib.Path(
+        config.DATA_DIR, "cassava_leaf_disease_classification/raw/test.csv"
+    )
     sub_csv: pathlib.Path = pathlib.Path(
-        config.DATA_DIR, "raw/sample_submission.csv"
+        config.DATA_DIR,
+        "cassava_leaf_disease_classification/raw/sample_submission.csv",
     )
     folds_csv: pathlib.Path = pathlib.Path(
-        config.DATA_DIR, "processed/train.csv"
+        config.DATA_DIR,
+        "cassava_leaf_disease_classification/processed/train.csv",
     )
     weight_path: pathlib.Path = pathlib.Path(config.MODEL_DIR)
-    oof_csv: pathlib.Path = pathlib.Path(config.DATA_DIR, "processed")
+    oof_csv: pathlib.Path = pathlib.Path(
+        config.DATA_DIR, "cassava_leaf_disease_classification/processed"
+    )
+    wandb_dir: pathlib.Path = pathlib.Path(config.WANDB_DIR)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -110,7 +122,8 @@ class MakeFolds:
 
     # TODO: To connect with FILES
     folds_csv: pathlib.Path = pathlib.Path(
-        config.DATA_DIR, "processed/train.csv"
+        config.DATA_DIR,
+        "cassava_leaf_disease_classification/processed/train.csv",
     )
 
     def to_dict(self) -> Dict[str, Any]:
@@ -284,7 +297,7 @@ class WandbParams:
     job_type: str = "Train"
     # add an unique group id behind group name.
     group: str = f"{GlobalTrainParams().model_name}_{MakeFolds().num_folds}_folds_{wandb.util.generate_id()}"
-    dir: str = "./wandb"
+    dir: str = FilePaths().wandb_dir
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
