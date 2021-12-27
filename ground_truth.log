@@ -303,5 +303,13 @@ Model: tf_efficientnet_b0_ns
 Pretrained: False 
 In Channels: 3
 
+MEAN CV: OrderedDict([('cv_mean_acc', 0.61875), ('cv_mean_auroc', 0.6251844)])
+
+
+
+2021-12-27 16:09:34:
+
+
+STD CV: OrderedDict([('cv_std_acc', 0.044852186), ('cv_std_auroc', 0.029412864)])
 
 ############################################ 2 EPOCHS and CURRENT GLOBAL PARAMS WITH NO CHANGES IN ANYTHING #############################################

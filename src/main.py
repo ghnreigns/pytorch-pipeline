@@ -260,21 +260,14 @@ def train_one_fold(
     return df_oof
 
 
-def train_loop(
-    df_folds: pd.DataFrame, is_plot: bool = False, is_forward_pass: bool = True
-):
+def train_loop(*args, **kwargs):
     """Perform the training loop on all folds. Here The CV score is the average of the validation fold metric.
     While the OOF score is the aggregation of all validation folds."""
 
     df_oof = pd.DataFrame()
 
     for fold in range(1, FOLDS.num_folds + 1):
-        _df_oof = train_one_fold(
-            df_folds=df_folds,
-            fold=fold,
-            is_plot=is_plot,
-            is_forward_pass=is_forward_pass,
-        )
+        _df_oof = train_one_fold(*args, fold=fold, **kwargs)
         df_oof = pd.concat([df_oof, _df_oof])
 
         # TODO: populate the cv_score_list using a dataframe like breast cancer project.
@@ -290,7 +283,7 @@ def train_loop(
 
     df_oof.to_csv(Path(FILES.oof_csv, "oof.csv"), index=False)
 
-    # TODO: Consider return df_oof.
+    return df_oof
 
 
 if __name__ == "__main__":
@@ -301,7 +294,9 @@ if __name__ == "__main__":
 
     is_inference = False
     if not is_inference:
-        train_loop(df_folds=df_folds, is_plot=False, is_forward_pass=False)
+        df_oof = train_loop(
+            df_folds=df_folds, is_plot=False, is_forward_pass=False
+        )
 
     # model_dir = Path(FILES.weight_path, MODEL_PARAMS.model_name).__str__()
     else:
