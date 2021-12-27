@@ -8,10 +8,8 @@ from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 
 
-BASE_DIR = (
-    Path(__file__).parent.parent.absolute().__str__()
-)  # C:\Users\reigHns\mnist
-sys.path.append(BASE_DIR)
+# BASE_DIR = Path(__file__).parent.parent.absolute().__str__()
+# sys.path.append(BASE_DIR)
 
 
 from typing import Any, Callable, Dict, List, Optional, Union
