@@ -119,8 +119,7 @@ class MakeFolds:
     cv_schema: str = "StratifiedKFold"
     class_col_name: str = "label"
     image_col_name: str = "image_id"
-
-    # TODO: To connect with FILES
+    image_extension: str = ""  # ".jpg"
     folds_csv: pathlib.Path = FilePaths().folds_csv
 
     def to_dict(self) -> Dict[str, Any]:
