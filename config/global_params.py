@@ -121,10 +121,7 @@ class MakeFolds:
     image_col_name: str = "image_id"
 
     # TODO: To connect with FILES
-    folds_csv: pathlib.Path = pathlib.Path(
-        config.DATA_DIR,
-        "cassava_leaf_disease_classification/processed/train.csv",
-    )
+    folds_csv: pathlib.Path = FilePaths().folds_csv
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""

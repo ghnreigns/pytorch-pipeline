@@ -98,4 +98,5 @@ def init_logger(log_file: str = Path(LOGS_DIR, "info.log")) -> logging.Logger:
     return logger
 
 
+# TODO: TO use logger for multiple modules, now only writing to `info.log`.
 logger = init_logger()
