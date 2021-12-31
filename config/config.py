@@ -3,6 +3,7 @@ import logging
 import warnings
 from logging import INFO, FileHandler, Formatter, StreamHandler, getLogger
 from pathlib import Path
+import sys
 
 # import pretty_errors  # NOQA: F401 (imported but unused)
 # from rich.logging import RichHandler
@@ -44,19 +45,18 @@ WANDB_DIR = Path(STORES_DIR, "wandb")
 CONFIG_DIR.mkdir(parents=True, exist_ok=True)
 LOGS_DIR.mkdir(parents=True, exist_ok=True)
 DATA_DIR.mkdir(parents=True, exist_ok=True)
-MODEL_DIR.mkdir(parents=True, exist_ok=True)
 STORES_DIR.mkdir(parents=True, exist_ok=True)
 BLOB_STORE.mkdir(parents=True, exist_ok=True)
 FEATURE_STORE.mkdir(parents=True, exist_ok=True)
 MODEL_REGISTRY.mkdir(parents=True, exist_ok=True)
 WANDB_DIR.mkdir(parents=True, exist_ok=True)
+TENSORBOARD.mkdir(parents=True, exist_ok=True)
 # TODO: Uncomment if init a new project, otherwise, comment out as I want to put many competition data in the same folder.
 # RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # PROCESSED_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # TRAIN_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # TEST_DATA_DIR.mkdir(parents=True, exist_ok=True)
 # new folder
-TENSORBOARD.mkdir(parents=True, exist_ok=True)
 
 
 # MLFlow model registry: Note the filepath is file:////C:\Users\reigHns\mnist\stores\model
@@ -82,8 +82,9 @@ def init_logger(log_file: str = Path(LOGS_DIR, "info.log")) -> logging.Logger:
         logging.Logger: [description]
     """
     logger = getLogger(__name__)
+
     logger.setLevel(INFO)
-    stream_handler = StreamHandler()
+    stream_handler = StreamHandler(stream=sys.stdout)
     stream_handler.setFormatter(
         Formatter("%(asctime)s: %(message)s", "%Y-%m-%d %H:%M:%S")
     )
@@ -93,7 +94,6 @@ def init_logger(log_file: str = Path(LOGS_DIR, "info.log")) -> logging.Logger:
     )
     logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
-
     return logger
 
 
