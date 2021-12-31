@@ -23,7 +23,6 @@ BASE_DIR = Path(__file__).parent.parent.absolute()  # C:\Users\reigHns\mnist
 CONFIG_DIR = Path(BASE_DIR, "config")
 LOGS_DIR = Path(BASE_DIR, "logs")
 DATA_DIR = Path(BASE_DIR, "data")
-MODEL_DIR = Path(BASE_DIR, "model")
 STORES_DIR = Path(BASE_DIR, "stores")
 
 

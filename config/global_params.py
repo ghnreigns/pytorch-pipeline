@@ -30,7 +30,7 @@ class FilePaths:
         config.DATA_DIR,
         "cassava_leaf_disease_classification/processed/train.csv",
     )
-    weight_path: pathlib.Path = pathlib.Path(config.MODEL_DIR)
+    weight_path: pathlib.Path = pathlib.Path(config.MODEL_REGISTRY)
     oof_csv: pathlib.Path = pathlib.Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/processed"
     )

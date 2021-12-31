@@ -1,8 +1,5 @@
 from __future__ import generators, print_function
 
-import os
-import sys
-
 from pathlib import Path
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
@@ -11,10 +8,6 @@ from pytorch_grad_cam.utils.image import show_cam_on_image
 # BASE_DIR = Path(__file__).parent.parent.absolute().__str__()
 # sys.path.append(BASE_DIR)
 
-
-from typing import Any, Callable, Dict, List, Optional, Union
-
-import numpy as np
 import pandas as pd
 
 import torch
