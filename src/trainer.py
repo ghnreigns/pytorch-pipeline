@@ -15,7 +15,6 @@ FILES = global_params.FilePaths()
 CRITERION_PARAMS = global_params.CriterionParams()
 SCHEDULER_PARAMS = global_params.SchedulerParams()
 OPTIMIZER_PARAMS = global_params.OptimizerParams()
-WANDB_PARAMS = global_params.WandbParams()
 LOGS_PARAMS = global_params.LogsParams()
 
 training_logger = config.init_logger(
@@ -80,11 +79,6 @@ class Trainer:
         )
         # create model directory if not exist and model_directory with run_id to identify easily.
         Path.mkdir(self.model_path, exist_ok=True)
-
-        # self.training_logger = config.init_logger(
-        #     log_file=Path.joinpath(self.model_path, "training.log"),
-        #     module_name="training",
-        # )
 
         ########################################################################################################################################
 
