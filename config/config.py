@@ -1,8 +1,8 @@
 # Configurations
 import logging
 import warnings
-from logging import INFO, FileHandler, Formatter, StreamHandler, getLogger
 from pathlib import Path
+from typing import Optional
 import sys
 
 # import pretty_errors  # NOQA: F401 (imported but unused)
@@ -70,7 +70,11 @@ TENSORBOARD.mkdir(parents=True, exist_ok=True)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 
-def init_logger(log_file: str = Path(LOGS_DIR, "info.log")) -> logging.Logger:
+def init_logger(
+    log_file: str = Path(LOGS_DIR, "info.log"),
+    module_name: Optional[str] = None,
+    level=logging.INFO,
+) -> logging.Logger:
     """Initialize logger and save to file.
 
     Consider having more log_file paths to save, eg: debug.log, error.log, etc.
@@ -81,16 +85,21 @@ def init_logger(log_file: str = Path(LOGS_DIR, "info.log")) -> logging.Logger:
     Returns:
         logging.Logger: [description]
     """
-    logger = getLogger(__name__)
 
-    logger.setLevel(INFO)
-    stream_handler = StreamHandler(stream=sys.stdout)
+    if module_name is None:
+        logger = logging.getLogger(__name__)
+    else:
+        # get module name, useful for multi-module logging
+        logger = logging.getLogger(module_name)
+
+    logger.setLevel(level)
+    stream_handler = logging.StreamHandler(stream=sys.stdout)
     stream_handler.setFormatter(
-        Formatter("%(asctime)s: %(message)s", "%Y-%m-%d %H:%M:%S")
+        logging.Formatter("%(asctime)s: %(message)s", "%Y-%m-%d %H:%M:%S")
     )
-    file_handler = FileHandler(filename=log_file)
+    file_handler = logging.FileHandler(filename=log_file)
     file_handler.setFormatter(
-        Formatter("%(asctime)s: %(message)s", "%Y-%m-%d %H:%M:%S")
+        logging.Formatter("%(asctime)s: %(message)s", "%Y-%m-%d %H:%M:%S")
     )
     logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
@@ -98,4 +107,4 @@ def init_logger(log_file: str = Path(LOGS_DIR, "info.log")) -> logging.Logger:
 
 
 # TODO: TO use logger for multiple modules, now only writing to `info.log`.
-logger = init_logger()
+# logger = init_logger()

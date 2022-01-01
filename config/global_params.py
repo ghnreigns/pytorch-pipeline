@@ -1,40 +1,40 @@
 from dataclasses import dataclass, field, asdict
 import pandas as pd
-import pathlib
 from typing import Any, Dict, List
 from config import config
 import wandb
+from pathlib import Path
 
 
 @dataclass
 class FilePaths:
     """Class to keep track of the files."""
 
-    train_images: pathlib.Path = pathlib.Path(
+    train_images: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/train"
     )
-    test_images: pathlib.Path = pathlib.Path(
+    test_images: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/test"
     )
-    train_csv: pathlib.Path = pathlib.Path(
+    train_csv: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/raw/train.csv"
     )
-    test_csv: pathlib.Path = pathlib.Path(
+    test_csv: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/raw/test.csv"
     )
-    sub_csv: pathlib.Path = pathlib.Path(
+    sub_csv: Path = Path(
         config.DATA_DIR,
         "cassava_leaf_disease_classification/raw/sample_submission.csv",
     )
-    folds_csv: pathlib.Path = pathlib.Path(
+    folds_csv: Path = Path(
         config.DATA_DIR,
         "cassava_leaf_disease_classification/processed/train.csv",
     )
-    weight_path: pathlib.Path = pathlib.Path(config.MODEL_REGISTRY)
-    oof_csv: pathlib.Path = pathlib.Path(
+    weight_path: Path = Path(config.MODEL_REGISTRY)
+    oof_csv: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/processed"
     )
-    wandb_dir: pathlib.Path = pathlib.Path(config.WANDB_DIR)
+    wandb_dir: Path = Path(config.WANDB_DIR)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -120,7 +120,7 @@ class MakeFolds:
     class_col_name: str = "label"
     image_col_name: str = "image_id"
     image_extension: str = ""  # ".jpg"
-    folds_csv: pathlib.Path = FilePaths().folds_csv
+    folds_csv: Path = FilePaths().folds_csv
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -185,7 +185,7 @@ class ModelParams:
     classification_type (str): classification type.
     """
 
-    model_name: str = "tf_efficientnet_b0_ns"  # Debug
+    model_name: str = "tf_efficientnet_b0_ns"  # Debug use tf_efficientnet_b0_ns else tf_efficientnet_b4_ns
 
     pretrained: bool = True
     input_channels: int = 3
@@ -298,3 +298,15 @@ class WandbParams:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
+
+
+@dataclass
+class LogsParams:
+    """A class to track logging parameters."""
+
+    # TODO: Slightly unclear as we decouple the mkdir logic from config.py. May consider to move it to config.py somehow.
+    # What is preventing this is I need to pass in the run id from WANDB to the logs folder. Same happens in trainer.py when creating model dir.
+    LOGS_DIR_RUN_ID = Path.joinpath(
+        config.LOGS_DIR, f"run_id_{WandbParams().group}"
+    )
+    Path.mkdir(LOGS_DIR_RUN_ID, parents=True, exist_ok=True)

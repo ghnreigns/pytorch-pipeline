@@ -16,7 +16,12 @@ CRITERION_PARAMS = global_params.CriterionParams()
 SCHEDULER_PARAMS = global_params.SchedulerParams()
 OPTIMIZER_PARAMS = global_params.OptimizerParams()
 WANDB_PARAMS = global_params.WandbParams()
+LOGS_PARAMS = global_params.LogsParams()
 
+training_logger = config.init_logger(
+    log_file=Path.joinpath(LOGS_PARAMS.LOGS_DIR_RUN_ID, "training.log"),
+    module_name="training",
+)
 
 # TODO: Make use of gc.collect and torch.cuda.empty_cache to free up memory especially for transformers https://github.com/huggingface/transformers/issues/1742
 # TODO: Consider saving image embeddings and everything under the sun in trainer, so we don't need to do it again during inference or PP.
@@ -76,9 +81,10 @@ class Trainer:
         # create model directory if not exist and model_directory with run_id to identify easily.
         Path.mkdir(self.model_path, exist_ok=True)
 
-        self.training_logger = config.init_logger(
-            Path.joinpath(self.model_path, "training.log")
-        )
+        # self.training_logger = config.init_logger(
+        #     log_file=Path.joinpath(self.model_path, "training.log"),
+        #     module_name="training",
+        # )
 
         ########################################################################################################################################
 
@@ -273,7 +279,7 @@ class Trainer:
         self.wandb_run.watch(self.model, log_freq=100)
         self.best_valid_loss = np.inf
 
-        self.training_logger.info(
+        training_logger.info(
             f"\nTraining on Fold {fold} and using {self.params.model_name}\n"
         )
 
@@ -294,7 +300,7 @@ class Trainer:
                 "%H:%M:%S", time.gmtime(time.time() - train_start_time)
             )
 
-            self.training_logger.info(
+            training_logger.info(
                 f"\n[RESULT]: Train. Epoch {_epoch}:\nAvg Train Summary Loss: {train_loss:.3f}\
                 \nLearning Rate: {curr_lr:.5f}\nTime Elapsed: {train_time_elapsed}\n"
             )
@@ -339,7 +345,7 @@ class Trainer:
             # TODO: Still need save each metric for each epoch into a list history. Rename properly
             # TODO: Log each metric to wandb and log file.
 
-            self.training_logger.info(
+            training_logger.info(
                 f"\n[RESULT]: Validation. Epoch {_epoch}\nAvg Val Summary Loss: {valid_loss:.3f}\
                 \nAvg Val Accuracy: {valid_accuracy:.3f}\nAvg Val Macro AUROC: {valid_macro_auroc:.3f}\
                 \nTime Elapsed: {valid_elapsed_time}\n"
@@ -372,7 +378,7 @@ class Trainer:
                 self.best_valid_loss = best_score
 
                 if early_stop:
-                    self.training_logger.info("Stopping Early!")
+                    training_logger.info("Stopping Early!")
                     break
             else:
 
@@ -384,7 +390,7 @@ class Trainer:
                         self.monitored_metric["metric_score"]
                         > self.best_valid_score
                     ):
-                        self.training_logger.info(
+                        training_logger.info(
                             f"\nValidation {self.monitored_metric['metric_name']} improved from {self.best_valid_score} to {self.monitored_metric['metric_score']}"
                         )
                         self.best_valid_score = self.monitored_metric[
@@ -416,16 +422,16 @@ class Trainer:
                             ),
                         )
 
-                        self.training_logger.info(
+                        training_logger.info(
                             f"\nSaving model with best valid {self.monitored_metric['metric_name']} score: {self.best_valid_score}"
                         )
                     else:
                         patience_counter_ -= 1
-                        self.training_logger.info(
+                        training_logger.info(
                             f"Patience Counter {patience_counter_}"
                         )
                         if patience_counter_ == 0:
-                            self.training_logger.info(
+                            training_logger.info(
                                 f"\n\nEarly Stopping, patience reached!\n\nbest valid {self.monitored_metric['metric_name']} score: {self.best_valid_score}"
                             )
                             break
