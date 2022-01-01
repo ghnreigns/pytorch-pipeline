@@ -36,6 +36,8 @@ class FilePaths:
     )
     wandb_dir: Path = Path(config.WANDB_DIR)
 
+    global_params_path: Path = Path(config.CONFIG_DIR, "global_params.py")
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)

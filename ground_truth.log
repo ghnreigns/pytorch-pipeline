@@ -313,3 +313,8 @@ MEAN CV: OrderedDict([('cv_mean_acc', 0.61875), ('cv_mean_auroc', 0.6251844)])
 STD CV: OrderedDict([('cv_std_acc', 0.044852186), ('cv_std_auroc', 0.029412864)])
 
 ############################################ 2 EPOCHS and CURRENT GLOBAL PARAMS WITH NO CHANGES IN ANYTHING #############################################
+
+
+### UPDATE ON 01/01/2022 ###
+FOR DEBUG MODE REFER TO THE tf_efficientnet_b0_ns_tf_efficientnet_b0_ns_5_folds_38mu08wg LOGS AND MODEL.
+FOR NON-DEBUG MODE.

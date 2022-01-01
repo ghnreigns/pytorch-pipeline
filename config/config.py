@@ -69,7 +69,7 @@ TENSORBOARD.mkdir(parents=True, exist_ok=True)
 ########################################################### Suppress User Warnings ###########################################################
 warnings.filterwarnings("ignore", category=UserWarning)
 
-
+# TODO: Check with Ian on this bug of multile lines printing. I have managed to debug the init constructor but not the rest. Reference: https://stackoverflow.com/questions/6729268/log-messages-appearing-twice-with-python-logging
 def init_logger(
     log_file: str = Path(LOGS_DIR, "info.log"),
     module_name: Optional[str] = None,
@@ -103,6 +103,7 @@ def init_logger(
     )
     logger.addHandler(stream_handler)
     logger.addHandler(file_handler)
+    logger.propagate = False
     return logger
 
 

@@ -21,6 +21,7 @@ training_logger = config.init_logger(
     log_file=Path.joinpath(LOGS_PARAMS.LOGS_DIR_RUN_ID, "training.log"),
     module_name="training",
 )
+training_logger.propagate = False
 
 # TODO: Make use of gc.collect and torch.cuda.empty_cache to free up memory especially for transformers https://github.com/huggingface/transformers/issues/1742
 # TODO: Consider saving image embeddings and everything under the sun in trainer, so we don't need to do it again during inference or PP.
