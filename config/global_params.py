@@ -294,6 +294,7 @@ class WandbParams:
     save_code: bool = True
     job_type: str = "Train"
     # add an unique group id behind group name.
+    # TODO: When PyTorch's DataLoader's num_workers is greater than 1, the group id is initiated multiple times.
     group: str = f"{GlobalTrainParams().model_name}_{MakeFolds().num_folds}_folds_{wandb.util.generate_id()}"
     dir: str = FilePaths().wandb_dir
 
@@ -312,3 +313,4 @@ class LogsParams:
         config.LOGS_DIR, f"run_id_{WandbParams().group}"
     )
     Path.mkdir(LOGS_DIR_RUN_ID, parents=True, exist_ok=True)
+    print("MKDIR")
