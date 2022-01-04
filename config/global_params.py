@@ -313,4 +313,3 @@ class LogsParams:
         config.LOGS_DIR, f"run_id_{WandbParams().group}"
     )
     Path.mkdir(LOGS_DIR_RUN_ID, parents=True, exist_ok=True)
-    print("MKDIR")

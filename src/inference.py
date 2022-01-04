@@ -1,6 +1,7 @@
 import collections
 import glob
-from typing import Dict, List
+from typing import List, Union, Any, Dict
+import albumentations
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,12 +9,14 @@ import pandas as pd
 import torch
 from config import config, global_params
 from tqdm.auto import tqdm
-
-from src import dataset, models, transformation
+from pathlib import Path
+from src import dataset, models, transformation, utils
 
 MODEL = global_params.ModelParams()
 FOLDS = global_params.MakeFolds()
 LOADER_PARAMS = global_params.DataLoaderParams()
+FILES = global_params.FilePaths()
+WANDB = global_params.WandbParams()
 device = config.DEVICE
 
 
@@ -68,16 +71,22 @@ def inference_all_folds(
 
 def inference(
     df_test: pd.DataFrame,
-    model_dir: str,
+    model_dir: Union[str, Path],
+    model: Union[models.CustomNeuralNet, Any],
+    transform_dict: Dict[str, albumentations.Compose] = {},
     df_sub: pd.DataFrame = None,
 ) -> Dict[str, np.ndarray]:
+
     """Inference the model and perform TTA, if any.
 
     Dataset and Dataloader are constructed within this function because of TTA.
+    model and transform_dict are passed as arguments to enable inferencing multiple different models.
 
     Args:
         df_test (pd.DataFrame): The test dataframe.
-        model_dir (str): model directory for the model.
+        model_dir (str, Path): model directory for the model.
+        model (Union[models.CustomNeuralNet, Any]): The model to be used for inference. Note that pretrained should be set to False.
+        transform_dict (Dict[str, albumentations.Compose], optional): The dictionary of transforms to be used for inference. Should call from get_inference_transforms().
         df_sub (pd.DataFrame, optional): The submission dataframe. Defaults to None.
 
     Returns:
@@ -91,13 +100,13 @@ def inference(
         df_sub = df_test.copy()
 
     all_preds = {}
+    model = model.to(device)
 
-    model = models.CustomNeuralNet(pretrained=False).to(device)
+    # Take note I always save my torch models as .pt files. Note we must return paths as str as torch.load does not support pathlib.
+    weights = utils.return_list_of_files(
+        directory=model_dir, return_string=True, extension=".pt"
+    )
 
-    transform_dict = transformation.get_inference_transforms()
-
-    # TODO: glob.glob does not preserve sequence... means we need order by lexiographic order. sorted(list([model_path for model_path in glob.glob(model_dir + "/*.pt")]))
-    weights = [model_path for model_path in glob.glob(model_dir + "/*.pt")]
     state_dicts = [torch.load(path)["model_state_dict"] for path in weights]
 
     # Loop over each TTA transforms, if TTA is none, then loop once over normal inference_augs.
@@ -125,3 +134,13 @@ def inference(
         plt.figure(figsize=(12, 6))
         plt.hist(df_sub[FOLDS.class_col_name], bins=100)
     return all_preds
+
+
+model_dir = Path(
+    r"C:\Users\reighns\reighns_ml\pytorch_pipeline\stores\model\tf_efficientnet_b4_ns_tf_efficientnet_b4_ns_5_folds_9au8inn1"
+)
+
+weights = utils.return_list_of_files(
+    directory=model_dir, return_string=True, extension=".pt"
+)
+print(weights)
