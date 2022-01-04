@@ -308,7 +308,7 @@ if __name__ == "__main__":
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data()
 
-    is_inference = False
+    is_inference = True
     if not is_inference:
         df_oof = train_loop(
             df_folds=df_folds, is_plot=False, is_forward_pass=False
@@ -316,6 +316,30 @@ if __name__ == "__main__":
 
     # model_dir = Path(FILES.weight_path, MODEL_PARAMS.model_name).__str__()
     else:
-        model_dir = r"C:\Users\reighns\kaggle_projects\cassava\model\tf_efficientnet_b0_ns"
-        predictions = inference.inference(df_test, model_dir, df_sub)
+
+        # TODO: model_dir is defined hardcoded, consider be able to pull the exact path from the saved logs/models from wandb even?
+
+        model_dir = Path(
+            r"C:\Users\reighns\reighns_ml\pytorch_pipeline\stores\model\tf_efficientnet_b4_ns_tf_efficientnet_b4_ns_5_folds_9au8inn1"
+        )
+
+        weights = utils.return_list_of_files(
+            directory=model_dir, return_string=True, extension=".pt"
+        )
+        model = models.CustomNeuralNet(
+            model_name="tf_efficientnet_b4_ns",
+            out_features=5,
+            in_channels=3,
+            pretrained=False,
+        ).to(device)
+        transform_dict = transformation.get_inference_transforms()
+        predictions = inference.inference(
+            df_test=df_test,
+            model_dir=model_dir,
+            model=model,
+            df_sub=df_test,
+            transform_dict=transform_dict,
+        )
+        # TODO: Note that I printed out predictions with notebook CASSAVA: tf_efficientnet_b4_ns_5_folds_9au8inn1 and both get same preds.
+        # TODO: add gradcam support for inference.
         # _ = inference.show_gradcam()

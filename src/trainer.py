@@ -24,6 +24,7 @@ training_logger = config.init_logger(
 
 # TODO: Make use of gc.collect and torch.cuda.empty_cache to free up memory especially for transformers https://github.com/huggingface/transformers/issues/1742
 # TODO: Consider saving image embeddings and everything under the sun in trainer, so we don't need to do it again during inference or PP.
+# TODO: Standardize naming conventions of prob, preds and logits, and make sure they are consistent - in inference.py, does not seem to be consistent.
 
 
 class Trainer:

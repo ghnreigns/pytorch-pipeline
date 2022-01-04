@@ -10,7 +10,7 @@ import torch
 from config import config, global_params
 from tqdm.auto import tqdm
 from pathlib import Path
-from src import dataset, models, transformation, utils
+from src import dataset, models, utils
 
 MODEL = global_params.ModelParams()
 FOLDS = global_params.MakeFolds()
@@ -50,6 +50,7 @@ def inference_all_folds(
 
             current_fold_preds = []
 
+            # TODO: use back get_sigmoid_softmax here instead of hard coding softmax
             for data in tqdm(test_loader, position=0, leave=True):
                 images = data["X"].to(device, non_blocking=True)
                 logits = model(images)
@@ -65,15 +66,11 @@ def inference_all_folds(
     return mean_preds
 
 
-# TODO: See my latest PyTorch to change the transform outside of function and as an argument.
-# TODO: Move model as argument too.
-
-
 def inference(
     df_test: pd.DataFrame,
     model_dir: Union[str, Path],
     model: Union[models.CustomNeuralNet, Any],
-    transform_dict: Dict[str, albumentations.Compose] = {},
+    transform_dict: Dict[str, albumentations.Compose],
     df_sub: pd.DataFrame = None,
 ) -> Dict[str, np.ndarray]:
 
@@ -86,7 +83,7 @@ def inference(
         df_test (pd.DataFrame): The test dataframe.
         model_dir (str, Path): model directory for the model.
         model (Union[models.CustomNeuralNet, Any]): The model to be used for inference. Note that pretrained should be set to False.
-        transform_dict (Dict[str, albumentations.Compose], optional): The dictionary of transforms to be used for inference. Should call from get_inference_transforms().
+        transform_dict (Dict[str, albumentations.Compose]): The dictionary of transforms to be used for inference. Should call from get_inference_transforms().
         df_sub (pd.DataFrame, optional): The submission dataframe. Defaults to None.
 
     Returns:
@@ -120,10 +117,11 @@ def inference(
         predictions = inference_all_folds(
             model=model, state_dicts=state_dicts, test_loader=test_loader
         )
-
+        print(predictions)
         all_preds[aug_name] = predictions
 
         ################# To change when necessary depending on the metrics needed for submission #################
+        # TODO: Consider returning a list of predictions ranging from np.argmax to preds, probs etc, and this way we can use whichever from the output? See my petfinder for more.
         df_sub[FOLDS.class_col_name] = np.argmax(predictions, axis=1)
 
         df_sub[[FOLDS.image_col_name, FOLDS.class_col_name]].to_csv(
@@ -134,13 +132,3 @@ def inference(
         plt.figure(figsize=(12, 6))
         plt.hist(df_sub[FOLDS.class_col_name], bins=100)
     return all_preds
-
-
-model_dir = Path(
-    r"C:\Users\reighns\reighns_ml\pytorch_pipeline\stores\model\tf_efficientnet_b4_ns_tf_efficientnet_b4_ns_5_folds_9au8inn1"
-)
-
-weights = utils.return_list_of_files(
-    directory=model_dir, return_string=True, extension=".pt"
-)
-print(weights)
