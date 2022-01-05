@@ -313,3 +313,10 @@ class LogsParams:
         config.LOGS_DIR, f"run_id_{WandbParams().group}"
     )
     Path.mkdir(LOGS_DIR_RUN_ID, parents=True, exist_ok=True)
+
+    if not LOGS_DIR_RUN_ID.exists():
+        Path.mkdir(LOGS_DIR_RUN_ID, parents=True, exist_ok=True)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)

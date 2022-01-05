@@ -19,6 +19,8 @@ FILES = global_params.FilePaths()
 WANDB = global_params.WandbParams()
 device = config.DEVICE
 
+# TODO: Push all inferenced models and oof and submissions to a proper folder?
+
 
 def inference_all_folds(
     model: models.CustomNeuralNet,
@@ -117,7 +119,6 @@ def inference(
         predictions = inference_all_folds(
             model=model, state_dicts=state_dicts, test_loader=test_loader
         )
-        print(predictions)
         all_preds[aug_name] = predictions
 
         ################# To change when necessary depending on the metrics needed for submission #################

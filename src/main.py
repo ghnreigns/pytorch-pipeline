@@ -126,6 +126,7 @@ def log_gradcam(curr_fold_best_checkpoint, df_oof, plot_gradcam: bool = True):
 
     elif "swin" in MODEL_PARAMS.model_name:
         # https://github.com/jacobgil/pytorch-grad-cam/blob/master/usage_examples/swinT_example.py
+        # TODO: Note this does not work for swin 384 as the size is not (7, 7)
         def reshape_transform(tensor, height=7, width=7):
             result = tensor.reshape(
                 tensor.size(0), height, width, tensor.size(2)
@@ -136,7 +137,7 @@ def log_gradcam(curr_fold_best_checkpoint, df_oof, plot_gradcam: bool = True):
             result = result.permute(0, 3, 1, 2)
             return result
 
-        target_layers = [model.backbone.layers[-1].blocks[-1].norm2]
+        target_layers = [model.backbone.layers[-1].blocks[-1].norm1]
 
     # load gradcam_dataset
     gradcam_dataset = dataset.CustomDataset(
