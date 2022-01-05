@@ -221,7 +221,7 @@ def train_one_fold(
     train_loader, valid_loader, df_oof = prepare.prepare_loaders(df_folds, fold)
 
     if is_plot:
-        image_grid = plot.show_image(
+        _image_grid = plot.show_image(
             loader=train_loader,
             nrows=1,
             ncols=1,

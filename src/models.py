@@ -269,6 +269,7 @@ def get_intermediate_features(name: str) -> Callable:
     return hook
 
 
+# The below is testing the forward hook functionalities, especially getting intermediate features.
 # Note that both models are same organically but created differently.
 # Due to seeding issues, you can check whether they are the same output or not by running them separately.
 # We also used assertion to check that the output from model(x) is same as torch.nn.LogSoftmax(dim=1)(fc3_output)

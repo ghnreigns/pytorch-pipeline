@@ -366,7 +366,7 @@ class Trainer:
                 valid_macro_auroc
             )
             if self.early_stopping is not None:
-                # TODO: Implement this properly, Add save_model_artifacts here as well.
+                # TODO: Implement this properly, Add save_model_artifacts here as well. Or rather, create a proper callback to reduce the complexity of code below.
                 best_score, early_stop = self.early_stopping.should_stop(
                     curr_epoch_score=valid_loss
                 )
@@ -495,6 +495,7 @@ class Trainer:
             # TODO: Consider rename data to batch for names consistency.
             if self.params.mixup:
                 # TODO: Implement MIXUP logic. Refer here: https://www.kaggle.com/ar2017/pytorch-efficientnet-train-aug-cutmix-fmix and my https://colab.research.google.com/drive/1sYkKG8O17QFplGMGXTLwIrGKjrgxpRt5#scrollTo=5y4PfmGZubYp
+                #       MIXUP logic can be found in petfinder.
                 pass
 
             # unpack - note that if BCEWithLogitsLoss, dataset should do view(-1,1) and not here.
