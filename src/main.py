@@ -1,39 +1,36 @@
 from __future__ import generators, print_function
 
+import shutil
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import pandas as pd
+import torch
+import typer
+import wandb
+from config import config, global_params
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
+from torch._C import device
 
+from src import (
+    dataset,
+    inference,
+    lr_finder,
+    metrics,
+    models,
+    plot,
+    prepare,
+    trainer,
+    transformation,
+    utils,
+)
 
 # BASE_DIR = Path(__file__).parent.parent.absolute().__str__()
 # sys.path.append(BASE_DIR)
 
-import pandas as pd
-
-import torch
-
-import typer
-from sklearn import metrics
-
-from src import (
-    plot,
-    prepare,
-    transformation,
-    utils,
-    models,
-    inference,
-    trainer,
-    dataset,
-    lr_finder,
-    metrics,
-)
-from config import config, global_params
-from torch._C import device
-
-import gc
-import wandb
-import matplotlib.pyplot as plt
-import shutil
+# TODO:  When PyTorch's DataLoader's num_workers is greater than 1, the group id is initiated multiple times. Not only that
+#        but the runnable code in models.py get executed multiple times as well: https://discuss.pytorch.org/t/file-gets-executed-multiple-times-when-using-num-workers-0-in-torch-utils-data-dataloader/19332
 
 FILES = global_params.FilePaths()
 FOLDS = global_params.MakeFolds()
@@ -301,7 +298,7 @@ def train_loop(*args, **kwargs):
         # print("\n\n\nOOF Score for Fold {}: {}\n\n\n".format(fold, curr_fold_best_score))
 
     cv_mean_d, cv_std_d = metrics.calculate_cv_metrics(df_oof)
-    main_logger.info(f"\n\n\nMEAN CV: {cv_mean_d}\n\n\nSTD CV: {cv_std_d}")
+    main_logger.info(f"\nMEAN CV: {cv_mean_d}\nSTD CV: {cv_std_d}")
 
     # print("Five Folds OOF", get_oof_roc(config, oof_df))
 
@@ -316,7 +313,7 @@ if __name__ == "__main__":
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data()
 
-    is_inference = True
+    is_inference = False
     if not is_inference:
         df_oof = train_loop(
             df_folds=df_folds, is_plot=False, is_forward_pass=False

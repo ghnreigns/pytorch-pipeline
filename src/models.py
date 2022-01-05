@@ -1,10 +1,10 @@
 import functools
+from pathlib import Path
 from typing import Callable, Dict, OrderedDict, Tuple, Union
 
 import timm
 import torch
 import torchsummary
-from pathlib import Path
 from config import config, global_params
 
 from src import utils

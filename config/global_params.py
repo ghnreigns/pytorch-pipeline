@@ -298,9 +298,9 @@ class WandbParams:
     save_code: bool = True
     job_type: str = "Train"
     # add an unique group id behind group name.
-    # TODO: When PyTorch's DataLoader's num_workers is greater than 1, the group id is initiated multiple times.
     group: str = f"{GlobalTrainParams().model_name}_{MakeFolds().num_folds}_folds_{wandb.util.generate_id()}"
     dir: str = FilePaths().wandb_dir
+    print(f"wandb run group: {group}")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
