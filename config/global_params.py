@@ -173,6 +173,10 @@ class CriterionParams:
         }
     )
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
+
 
 @dataclass
 class ModelParams:

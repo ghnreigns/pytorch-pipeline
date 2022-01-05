@@ -80,6 +80,13 @@ def wandb_init(fold: int):
         "Train_Params": TRAIN_PARAMS.to_dict(),
         "Model_Params": MODEL_PARAMS.to_dict(),
         "Loader_Params": LOADER_PARAMS.to_dict(),
+        "File_Params": FILES.to_dict(),
+        "Wandb_Params": WANDB_PARAMS.to_dict(),
+        "Folds_Params": FOLDS.to_dict(),
+        "Augment_Params": global_params.AugmentationParams().to_dict(),
+        "Criterion_Params": global_params.CriterionParams().to_dict(),
+        "Scheduler_Params": global_params.SchedulerParams().to_dict(),
+        "Optimizer_Params": global_params.OptimizerParams().to_dict(),
     }
 
     wandb_run = wandb.init(
@@ -309,7 +316,7 @@ if __name__ == "__main__":
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data()
 
-    is_inference = True
+    is_inference = False
     if not is_inference:
         df_oof = train_loop(
             df_folds=df_folds, is_plot=False, is_forward_pass=False

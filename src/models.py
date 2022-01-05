@@ -9,7 +9,7 @@ from config import config, global_params
 
 from src import utils
 
-MODEL_PARAMS = global_params.ModelParams
+MODEL_PARAMS = global_params.ModelParams()
 LOGS_PARAMS = global_params.LogsParams()
 device = config.DEVICE
 
