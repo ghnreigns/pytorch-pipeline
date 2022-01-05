@@ -316,7 +316,7 @@ if __name__ == "__main__":
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data()
 
-    is_inference = False
+    is_inference = True
     if not is_inference:
         df_oof = train_loop(
             df_folds=df_folds, is_plot=False, is_forward_pass=False

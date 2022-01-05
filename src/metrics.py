@@ -11,7 +11,6 @@ import pandas as pd
 from pathlib import Path
 import collections
 
-from src.main import LOGS_PARAMS
 
 FOLDS = global_params.MakeFolds()
 TRAIN_PARAMS = global_params.GlobalTrainParams()

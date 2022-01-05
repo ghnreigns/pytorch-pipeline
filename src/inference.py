@@ -1,16 +1,16 @@
 import collections
-import glob
-from typing import List, Union, Any, Dict
-import albumentations
+from pathlib import Path
+from typing import Any, Dict, List, Union
 
+import albumentations
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
 from config import config, global_params
 from tqdm.auto import tqdm
-from pathlib import Path
-from src import dataset, models, utils
+
+from src import dataset, models, utils, trainer
 
 MODEL = global_params.ModelParams()
 FOLDS = global_params.MakeFolds()
@@ -57,7 +57,7 @@ def inference_all_folds(
                 images = data["X"].to(device, non_blocking=True)
                 logits = model(images)
                 test_prob = (
-                    torch.nn.Softmax(dim=1)(input=logits).to("cpu").numpy()
+                    trainer.Trainer.get_sigmoid_softmax()(logits).cpu().numpy()
                 )
 
                 current_fold_preds.append(test_prob)
