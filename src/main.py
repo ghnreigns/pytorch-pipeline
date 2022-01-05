@@ -32,6 +32,8 @@ from src import (
 # TODO:  When PyTorch's DataLoader's num_workers is greater than 1, the group id is initiated multiple times. Not only that
 #        but the runnable code in models.py get executed multiple times as well: https://discuss.pytorch.org/t/file-gets-executed-multiple-times-when-using-num-workers-0-in-torch-utils-data-dataloader/19332
 
+# TODO: Gradient Accum and Mixup code can be referenced from Petfinder.
+
 FILES = global_params.FilePaths()
 FOLDS = global_params.MakeFolds()
 MODEL_PARAMS = global_params.ModelParams()
