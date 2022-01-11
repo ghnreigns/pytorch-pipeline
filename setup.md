@@ -89,3 +89,10 @@ print(trainer.Trainer.get_sigmoid_softmax()) -> nn.Sigmoid()
 ```
 
 Notice that I can use the `get_sigmoid_softmax()` method in `inference.py` without creating an instance of the class.
+
+
+## Coding Pitfalls
+
+### Mutable Default Arguments
+
+https://docs.python-guide.org/writing/gotchas/

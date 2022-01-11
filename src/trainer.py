@@ -34,6 +34,7 @@ class Trainer:
         self,
         params: global_params.GlobalTrainParams,
         model: models.CustomNeuralNet,
+        model_artifacts_path: Union[str, Path],
         device=torch.device("cpu"),
         wandb_run=None,
         early_stopping: callbacks.EarlyStopping = None,
@@ -41,6 +42,7 @@ class Trainer:
         # Set params
         self.params = params
         self.model = model
+        self.model_path = model_artifacts_path
         self.device = device
 
         self.wandb_run = wandb_run
@@ -71,17 +73,6 @@ class Trainer:
         )
         self.patience_counter = self.params.patience  # Early Stopping Counter
         self.history = DefaultDict(list)
-
-        ########################################## Define Weight Paths ###################################################################
-        # Note that now the model save path has wandb_run's group id appended for me to easily recover which run corresponds to which model.
-        self.model_path = Path(
-            FILES.weight_path,
-            f"{self.params.model_name}_{self.wandb_run.group}",
-        )
-        # create model directory if not exist and model_directory with run_id to identify easily.
-        Path.mkdir(self.model_path, exist_ok=True)
-
-        ########################################################################################################################################
 
     @staticmethod
     def get_optimizer(

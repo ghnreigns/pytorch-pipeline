@@ -4,6 +4,7 @@ import shutil
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import torch
 import typer
@@ -220,17 +221,29 @@ def train_one_fold(
     # wandb.login()
     wandb_run = wandb_init(fold=fold)
 
+    # model_artifacts_path stores model weights, oof, etc. Note that now the model save path has wandb_run's group id appended for me to easily recover which run corresponds to which model.
+    model_artifacts_path = Path(
+        FILES.weight_path,
+        f"{MODEL_PARAMS.model_name}_{wandb_run.group}",
+    )
+    # create model directory if not exist and model_directory with run_id to identify easily.
+    Path.mkdir(model_artifacts_path, exist_ok=True)
+
     train_loader, valid_loader, df_oof = prepare.prepare_loaders(df_folds, fold)
 
     if is_plot:
-        _image_grid = plot.show_image(
+        image_grid = plot.show_image(
             loader=train_loader,
-            nrows=1,
-            ncols=1,
             mean=[0.485, 0.456, 0.406],
             std=[0.229, 0.224, 0.225],
+            one_channel=False,
         )
-        # TODO: add image_grid to wandb.
+
+        images = wandb.Image(
+            np.transpose(image_grid, (1, 2, 0)),
+            caption="Top: Output, Bottom: Input",
+        )
+        wandb.log({"examples": images})
 
     # Model, cost function and optimizer instancing
     model = models.CustomNeuralNet().to(device)
@@ -250,6 +263,7 @@ def train_one_fold(
     reighns_trainer: trainer.Trainer = trainer.Trainer(
         params=TRAIN_PARAMS,
         model=model,
+        model_artifacts_path=model_artifacts_path,
         device=device,
         wandb_run=wandb_run,
     )
@@ -266,7 +280,9 @@ def train_one_fold(
     df_oof["oof_trues"] = curr_fold_best_checkpoint["oof_trues"]
     df_oof["oof_preds"] = curr_fold_best_checkpoint["oof_preds"]
 
-    df_oof.to_csv(Path(FILES.oof_csv, f"oof_fold_{fold}.csv"), index=False)
+    df_oof.to_csv(
+        Path(model_artifacts_path, f"oof_fold_{fold}.csv"), index=False
+    )
     if is_gradcam:
         # TODO: df_oof['error_analysis'] = todo - error analysis by ranking prediction confidence and plot gradcam for top 10 and bottom 10.
         gradcam_table = log_gradcam(
@@ -318,12 +334,10 @@ if __name__ == "__main__":
     is_inference = False
     if not is_inference:
         df_oof = train_loop(
-            df_folds=df_folds, is_plot=False, is_forward_pass=False
+            df_folds=df_folds, is_plot=True, is_forward_pass=False
         )
 
-    # model_dir = Path(FILES.weight_path, MODEL_PARAMS.model_name).__str__()
     else:
-
         # TODO: model_dir is defined hardcoded, consider be able to pull the exact path from the saved logs/models from wandb even?
 
         model_dir = Path(

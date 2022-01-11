@@ -52,7 +52,6 @@ def inference_all_folds(
 
             current_fold_preds = []
 
-            # TODO: use back get_sigmoid_softmax here instead of hard coding softmax
             for data in tqdm(test_loader, position=0, leave=True):
                 images = data["X"].to(device, non_blocking=True)
                 logits = model(images)
