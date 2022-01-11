@@ -15,11 +15,12 @@ def get_train_transforms(
     """Performs Augmentation on training data.
 
     Args:
-        image_size (int, optional): [description]. Defaults to TRANSFORMS.image_size.
+        image_size (int, optional): The image size. Defaults to TRANSFORMS.image_size.
 
     Returns:
-        (albumentations.core.composition.Compose): [description]
+        albumentations.core.composition.Compose: The transforms for training set.
     """
+
     return albumentations.Compose(
         [
             albumentations.RandomResizedCrop(
@@ -32,6 +33,18 @@ def get_train_transforms(
             albumentations.HorizontalFlip(p=0.5),
             albumentations.VerticalFlip(p=0.5),
             albumentations.Cutout(p=0.5),
+            # albumentations.CoarseDropout(
+            #     max_holes=8,
+            #     max_height=8,
+            #     max_width=8,
+            #     min_holes=None,
+            #     min_height=None,
+            #     min_width=None,
+            #     fill_value=0,
+            #     mask_fill_value=None,
+            #     always_apply=False,
+            #     p=0.5,
+            # ),
             albumentations.Resize(image_size, image_size),
             albumentations.Normalize(
                 mean=TRANSFORMS.mean,
@@ -50,10 +63,10 @@ def get_valid_transforms(
     """Performs Augmentation on validation data.
 
     Args:
-        image_size (int, optional): [description]. Defaults to TRANSFORMS.image_size.
+        image_size (int, optional): The image size. Defaults to TRANSFORMS.image_size.
 
     Returns:
-        [type]: [description]
+        albumentations.core.composition.Compose: The transforms for validation set.
     """
     return albumentations.Compose(
         [
@@ -75,10 +88,10 @@ def get_gradcam_transforms(
     """Performs Augmentation on gradcam data.
 
     Args:
-        image_size (int, optional): [description]. Defaults to TRANSFORMS.image_size.
+        image_size (int, optional): The image size. Defaults to TRANSFORMS.image_size.
 
     Returns:
-        [type]: [description]
+        albumentations.core.composition.Compose: The transforms for gradcam.
     """
     return albumentations.Compose(
         [
@@ -98,15 +111,16 @@ def get_inference_transforms(
     image_size: int = TRANSFORMS.image_size,
 ) -> Dict[str, albumentations.core.composition.Compose]:
     """Performs Augmentation on test dataset.
-    Returns the transforms for inference in a dictionary which can hold TTA transforms.
+
+    Remember tta transforms need resize and normalize.
 
     Args:
-        image_size (int, optional): [description]. Defaults to TRANSFORMS.image_size.
+        image_size (int, optional): The image size. Defaults to TRANSFORMS.image_size.
 
     Returns:
-        Dict[str, albumentations.Compose]: [description]
+        transforms_dict (Dict[str, albumentations.core.composition.Compose]): Returns the transforms for inference in a dictionary which can hold TTA transforms.
     """
-    # TODO: Remember tta transforms need resize and normalize.
+
     transforms_dict = {
         "transforms_test": albumentations.Compose(
             [
@@ -124,6 +138,12 @@ def get_inference_transforms(
         #     [
         #         albumentations.HorizontalFlip(p=1.0),
         #         albumentations.Resize(image_size, image_size),
+        #         albumentations.Normalize(
+        #             mean=TRANSFORMS.mean,
+        #             std=TRANSFORMS.std,
+        #             max_pixel_value=255.0,
+        #             p=1.0,
+        #         ),
         #         ToTensorV2(),
         #     ]
         # ),

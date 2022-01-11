@@ -13,6 +13,7 @@ from config import config, global_params
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
 from torch._C import device
+from typing import Union
 
 from src import (
     dataset,
@@ -42,6 +43,7 @@ LOADER_PARAMS = global_params.DataLoaderParams()
 TRAIN_PARAMS = global_params.GlobalTrainParams()
 WANDB_PARAMS = global_params.WandbParams()
 LOGS_PARAMS = global_params.LogsParams()
+MODEL_ARTIFACTS_PATH = global_params.FilePaths().get_model_artifacts_path()
 
 device = config.DEVICE
 
@@ -221,14 +223,6 @@ def train_one_fold(
     # wandb.login()
     wandb_run = wandb_init(fold=fold)
 
-    # model_artifacts_path stores model weights, oof, etc. Note that now the model save path has wandb_run's group id appended for me to easily recover which run corresponds to which model.
-    model_artifacts_path = Path(
-        FILES.weight_path,
-        f"{MODEL_PARAMS.model_name}_{wandb_run.group}",
-    )
-    # create model directory if not exist and model_directory with run_id to identify easily.
-    Path.mkdir(model_artifacts_path, exist_ok=True)
-
     train_loader, valid_loader, df_oof = prepare.prepare_loaders(df_folds, fold)
 
     if is_plot:
@@ -263,7 +257,7 @@ def train_one_fold(
     reighns_trainer: trainer.Trainer = trainer.Trainer(
         params=TRAIN_PARAMS,
         model=model,
-        model_artifacts_path=model_artifacts_path,
+        model_artifacts_path=MODEL_ARTIFACTS_PATH,
         device=device,
         wandb_run=wandb_run,
     )
@@ -281,7 +275,7 @@ def train_one_fold(
     df_oof["oof_preds"] = curr_fold_best_checkpoint["oof_preds"]
 
     df_oof.to_csv(
-        Path(model_artifacts_path, f"oof_fold_{fold}.csv"), index=False
+        Path(MODEL_ARTIFACTS_PATH, f"oof_fold_{fold}.csv"), index=False
     )
     if is_gradcam:
         # TODO: df_oof['error_analysis'] = todo - error analysis by ranking prediction confidence and plot gradcam for top 10 and bottom 10.
@@ -318,9 +312,7 @@ def train_loop(*args, **kwargs):
     cv_mean_d, cv_std_d = metrics.calculate_cv_metrics(df_oof)
     main_logger.info(f"\nMEAN CV: {cv_mean_d}\nSTD CV: {cv_std_d}")
 
-    # print("Five Folds OOF", get_oof_roc(config, oof_df))
-
-    df_oof.to_csv(Path(FILES.oof_csv, "oof.csv"), index=False)
+    df_oof.to_csv(Path(MODEL_ARTIFACTS_PATH, "oof.csv"), index=False)
 
     return df_oof
 
@@ -333,8 +325,9 @@ if __name__ == "__main__":
 
     is_inference = False
     if not is_inference:
+        # caution turn on is_plot or is_forward_pass etc will not have the same run results vs not turned on since initialized is diff.
         df_oof = train_loop(
-            df_folds=df_folds, is_plot=True, is_forward_pass=False
+            df_folds=df_folds, is_plot=False, is_forward_pass=False
         )
 
     else:

@@ -31,9 +31,7 @@ class FilePaths:
         "cassava_leaf_disease_classification/processed/train.csv",
     )
     weight_path: Path = Path(config.MODEL_REGISTRY)
-    oof_csv: Path = Path(
-        config.DATA_DIR, "cassava_leaf_disease_classification/processed"
-    )
+
     wandb_dir: Path = Path(config.WANDB_DIR)
 
     global_params_path: Path = Path(config.CONFIG_DIR, "global_params.py")
@@ -41,6 +39,23 @@ class FilePaths:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
+
+    def get_model_artifacts_path(self) -> Path:
+        """Returns the model artifacts path.
+
+        Returns:
+            Path(model_artifacts_path) (Path): Model artifacts path.
+        """
+        # model_artifacts_path stores model weights, oof, etc. Note that now the model save path has wandb_run's group id appended for me to easily recover which run corresponds to which model.
+        # create model directory if not exist and model_directory with run_id to identify easily.
+
+        model_artifacts_path: Path = Path(
+            self.weight_path,
+            f"{ModelParams().model_name}_{WandbParams().group}",
+        )
+        Path.mkdir(model_artifacts_path, parents=True, exist_ok=True)
+        # oof_csv: Path = Path(model_artifacts_path)
+        return model_artifacts_path
 
 
 @dataclass

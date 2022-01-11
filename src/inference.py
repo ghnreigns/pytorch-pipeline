@@ -18,8 +18,8 @@ LOADER_PARAMS = global_params.DataLoaderParams()
 FILES = global_params.FilePaths()
 WANDB = global_params.WandbParams()
 device = config.DEVICE
-
-# TODO: Push all inferenced models and oof and submissions to a proper folder?
+MODEL_ARTIFACTS_PATH = global_params.FilePaths().get_model_artifacts_path()
+# 1. Push all inferenced models and oof and submissions to the same folder with the model weights.
 
 
 def inference_all_folds(
@@ -42,7 +42,7 @@ def inference_all_folds(
     model.eval()
 
     with torch.no_grad():
-        all_folds_preds = []
+        all_folds_probs = []
 
         for _fold_num, state in enumerate(state_dicts):
             if "model_state_dict" not in state:
@@ -50,20 +50,22 @@ def inference_all_folds(
             else:
                 model.load_state_dict(state["model_state_dict"])
 
-            current_fold_preds = []
+            current_fold_probs = []
 
             for data in tqdm(test_loader, position=0, leave=True):
                 images = data["X"].to(device, non_blocking=True)
-                logits = model(images)
-                test_prob = (
-                    trainer.Trainer.get_sigmoid_softmax()(logits).cpu().numpy()
+                test_logits = model(images)
+                test_probs = (
+                    trainer.Trainer.get_sigmoid_softmax()(test_logits)
+                    .cpu()
+                    .numpy()
                 )
 
-                current_fold_preds.append(test_prob)
+                current_fold_probs.append(test_probs)
 
-            current_fold_preds = np.concatenate(current_fold_preds, axis=0)
-            all_folds_preds.append(current_fold_preds)
-        mean_preds = np.mean(all_folds_preds, axis=0)
+            current_fold_probs = np.concatenate(current_fold_probs, axis=0)
+            all_folds_probs.append(current_fold_probs)
+        mean_preds = np.mean(all_folds_probs, axis=0)
     return mean_preds
 
 
@@ -125,7 +127,9 @@ def inference(
         df_sub[FOLDS.class_col_name] = np.argmax(predictions, axis=1)
 
         df_sub[[FOLDS.image_col_name, FOLDS.class_col_name]].to_csv(
-            f"submission_{aug_name}.csv", index=False
+            Path(
+                MODEL_ARTIFACTS_PATH, f"submission_{aug_name}.csv", index=False
+            )
         )
         print(df_sub.head())
 
