@@ -61,6 +61,8 @@ class Trainer:
         if self.params.use_amp:
             # https://pytorch.org/docs/stable/notes/amp_examples.html
             self.scaler = torch.cuda.amp.GradScaler()
+        else:
+            self.scaler = None
 
         # list to contain various train metrics
         # TODO: how to add more metrics? wandb log too. Maybe save to model artifacts?
@@ -496,30 +498,26 @@ class Trainer:
             targets = data["y"].to(self.device, non_blocking=True)
 
             batch_size = inputs.shape[0]
-            if self.params.use_amp:
-                self.optimizer.zero_grad()
-                with torch.cuda.amp.autocast(
-                    enabled=True, dtype=torch.float16, cache_enabled=True
-                ):
-                    logits = self.model(inputs)  # Forward pass logits
-                    curr_batch_train_loss = self.train_criterion(
-                        targets,
-                        logits,
-                        batch_size,
-                        criterion_params=CRITERION_PARAMS,
-                    )
-                self.scaler.scale(curr_batch_train_loss).backward()
-                self.scaler.step(self.optimizer)
-                self.scaler.update()
-            else:
+
+            with torch.cuda.amp.autocast(
+                enabled=self.params.use_amp,
+                dtype=torch.float16,
+                cache_enabled=True,
+            ):
                 logits = self.model(inputs)  # Forward pass logits
-                self.optimizer.zero_grad()  # reset gradients
                 curr_batch_train_loss = self.train_criterion(
                     targets,
                     logits,
                     batch_size,
                     criterion_params=CRITERION_PARAMS,
                 )
+            self.optimizer.zero_grad()  # reset gradients
+
+            if self.scaler is not None:
+                self.scaler.scale(curr_batch_train_loss).backward()
+                self.scaler.step(self.optimizer)
+                self.scaler.update()
+            else:
                 curr_batch_train_loss.backward()  # Backward pass
                 self.optimizer.step()  # Update weights using the optimizer
 

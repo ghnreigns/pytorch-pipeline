@@ -77,6 +77,66 @@ forward_X, forward_y, model_summary = models.forward_pass(
 [Reference on RandomResizedCrop](https://machinelearningmastery.com/best-practices-for-preparing-and-augmenting-image-data-for-convolutional-neural-networks/). So albumentation's has default parameters same as the article.
 
 
+## Trainer
+
+### Autocast
+
+```python
+if self.params.use_amp:
+    self.optimizer.zero_grad()
+    with torch.cuda.amp.autocast(
+        enabled=True, dtype=torch.float16, cache_enabled=True
+    ):
+        logits = self.model(inputs)  # Forward pass logits
+        curr_batch_train_loss = self.train_criterion(
+            targets,
+            logits,
+            batch_size,
+            criterion_params=CRITERION_PARAMS,
+        )
+    self.scaler.scale(curr_batch_train_loss).backward()
+    self.scaler.step(self.optimizer)
+    self.scaler.update()
+else:
+    logits = self.model(inputs)  # Forward pass logits
+    self.optimizer.zero_grad()  # reset gradients
+    curr_batch_train_loss = self.train_criterion(
+        targets,
+        logits,
+        batch_size,
+        criterion_params=CRITERION_PARAMS,
+    )
+    curr_batch_train_loss.backward()  # Backward pass
+    self.optimizer.step()  # Update weights using the optimizer
+```
+can be changed to 
+
+```python
+with torch.cuda.amp.autocast(
+    enabled=self.params.use_amp,
+    dtype=torch.float16,
+    cache_enabled=True,
+):
+    logits = self.model(inputs)  # Forward pass logits
+    curr_batch_train_loss = self.train_criterion(
+        targets,
+        logits,
+        batch_size,
+        criterion_params=CRITERION_PARAMS,
+    )
+self.optimizer.zero_grad()  # reset gradients
+
+if self.scaler is not None:
+    self.scaler.scale(curr_batch_train_loss).backward()
+    self.scaler.step(self.optimizer)
+    self.scaler.update()
+else:
+    curr_batch_train_loss.backward()  # Backward pass
+    self.optimizer.step()  # Update weights using the optimizer
+```
+
+This is in line with [torch's example](https://github.com/pytorch/vision/blob/main/references/classification/train.py). We reduced some overhead because we not longer need to check `if-else` for whether we use autocast or not. In our `config`, we already have a boolean flag `use_amp`, we just need to pass it to the `enabled` argument of `autocast` to indicate whether we are training with autocast or not.
+
 ## Miscellaneous
 
 ### Static Methods
