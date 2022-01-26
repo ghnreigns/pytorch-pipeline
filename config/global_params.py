@@ -206,7 +206,7 @@ class ModelParams:
     classification_type (str): classification type.
     """
 
-    model_name: str = "tf_efficientnet_b4_ns"  # Debug use tf_efficientnet_b0_ns else tf_efficientnet_b4_ns
+    model_name: str = "tf_efficientnet_b0_ns"  # Debug use tf_efficientnet_b0_ns else tf_efficientnet_b4_ns
 
     pretrained: bool = True
     input_channels: int = 3
@@ -232,9 +232,9 @@ class ModelParams:
 
 @dataclass
 class GlobalTrainParams:
-    debug: bool = False
+    debug: bool = True
     debug_multipler: int = 2
-    epochs: int = 10  # 1 or 2 when debug
+    epochs: int = 2  # 1 or 2 when debug
     use_amp: bool = True
     mixup: bool = AugmentationParams().mixup
     patience: int = 2
@@ -259,7 +259,7 @@ class OptimizerParams:
     optimizer_name: str = "AdamW"
     optimizer_params: Dict[str, Any] = field(
         default_factory=lambda: {
-            "lr": 3e-4,
+            "lr": 1e-3,
             "betas": (0.9, 0.999),
             "amsgrad": False,
             "weight_decay": 1e-3,
