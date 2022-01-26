@@ -1,5 +1,6 @@
 import functools
-from typing import Callable, Dict, Tuple, Union
+from pathlib import Path
+from typing import Callable, Dict, OrderedDict, Tuple, Union
 
 import timm
 import torch
@@ -8,9 +9,14 @@ from config import config, global_params
 
 from src import utils
 
-MODEL_PARAMS = global_params.ModelParams
-
+MODEL_PARAMS = global_params.ModelParams()
+LOGS_PARAMS = global_params.LogsParams()
 device = config.DEVICE
+
+models_logger = config.init_logger(
+    log_file=Path.joinpath(LOGS_PARAMS.LOGS_DIR_RUN_ID, "models.log"),
+    module_name="models",
+)
 
 
 class CustomNeuralNet(torch.nn.Module):
@@ -37,7 +43,7 @@ class CustomNeuralNet(torch.nn.Module):
         self.backbone = timm.create_model(
             model_name, pretrained=self.pretrained, in_chans=self.in_channels
         )
-        config.logger.info(
+        models_logger.info(
             f"\nModel: {model_name}\nPretrained: {pretrained}\nIn Channels: {in_channels}\n"
         )
 
@@ -157,16 +163,148 @@ def forward_pass(
     image_size = (channel, height, width)
 
     try:
-        config.logger.info("Model Summary:")
+        models_logger.info("Model Summary:")
         torchsummary.summary(model, image_size)
     except RuntimeError:
-        config.logger.debug(f"The channel is {channel}. Check!")
+        models_logger.debug(f"The channel is {channel}. Check!")
 
     X = torch.randn((batch_size, *image_size)).to(device)
     y = model(image=X)
-    config.logger.info("Forward Pass Successful!")
-    config.logger.info(f"X: {X.shape} \ny: {y.shape}")
-    config.logger.info(f"X[0][0][0]: {X[0][0][0][0]} \ny[0][0][0]: {y[0][0]}")
+    models_logger.info("Forward Pass Successful!")
+    models_logger.info(f"X: {X.shape} \ny: {y.shape}")
+    models_logger.info(f"X[0][0][0]: {X[0][0][0][0]} \ny[0][0][0]: {y[0][0]}")
 
     utils.free_gpu_memory(model, X, y)
     return X, y
+
+
+class ToyModel(torch.nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.cl1 = torch.nn.Linear(25, 60)
+        self.cl2 = torch.nn.Linear(60, 16)
+        self.fc1 = torch.nn.Linear(16, 120)
+        self.fc2 = torch.nn.Linear(120, 84)
+        self.fc3 = torch.nn.Linear(84, 10)
+
+    def forward(self, x):
+        """Forward pass of the model.
+
+        Args:
+            x ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        x = torch.nn.ReLU()(self.cl1(x))
+        x = torch.nn.ReLU()(self.cl2(x))
+        x = torch.nn.ReLU()(self.fc1(x))
+        x = torch.nn.ReLU()(self.fc2(x))
+        x = torch.nn.LogSoftmax(dim=1)(self.fc3(x))
+        return x
+
+
+class ToySequentialModel(torch.nn.Module):
+    # Create a sequential model pytorch same as ToyModel.
+    def __init__(self) -> None:
+        super().__init__()
+
+        self.backbone = torch.nn.Sequential(
+            OrderedDict(
+                [
+                    ("cl1", torch.nn.Linear(25, 60)),
+                    ("cl_relu1", torch.nn.ReLU()),
+                    ("cl2", torch.nn.Linear(60, 16)),
+                    ("cl_relu2", torch.nn.ReLU()),
+                ]
+            )
+        )
+
+        self.head = torch.nn.Sequential(
+            OrderedDict(
+                [
+                    ("fc1", torch.nn.Linear(16, 120)),
+                    ("fc_relu_1", torch.nn.ReLU()),
+                    ("fc2", torch.nn.Linear(120, 84)),
+                    ("fc_relu_2", torch.nn.ReLU()),
+                    ("fc3", torch.nn.Linear(84, 10)),
+                    ("fc_log_softmax", torch.nn.LogSoftmax(dim=1)),
+                ]
+            )
+        )
+
+    def forward(self, x):
+        """Forward pass of the model.
+
+        Args:
+            x ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        x = self.backbone(x)
+        x = self.head(x)
+        return x
+
+
+activation = {}
+utils.seed_all()
+
+
+def get_intermediate_features(name: str) -> Callable:
+    """Get the intermediate features of a model. Forward Hook.
+
+    This is using forward hook with reference https://discuss.pytorch.org/t/how-can-l-load-my-best-model-as-a-feature-extractor-evaluator/17254/5
+
+    Args:
+        name (str): name of the layer.
+
+    Returns:
+        Callable: [description]
+    """
+
+    def hook(model, input, output):
+        activation[name] = output.detach()
+
+    return hook
+
+
+# The below is testing the forward hook functionalities, especially getting intermediate features.
+# Note that both models are same organically but created differently.
+# Due to seeding issues, you can check whether they are the same output or not by running them separately.
+# We also used assertion to check that the output from model(x) is same as torch.nn.LogSoftmax(dim=1)(fc3_output)
+
+use_sequential_model = False
+x = torch.randn(1, 25)
+if not use_sequential_model:
+
+    model = ToyModel()
+
+    model.fc2.register_forward_hook(get_intermediate_features("fc2"))
+    model.fc3.register_forward_hook(get_intermediate_features("fc3"))
+    output = model(x)
+    print(activation)
+    fc2_output = activation["fc2"]
+    print(fc2_output[0])
+    fc3_output = activation["fc3"]
+    # assert output and logsoftmax fc3_output are the same
+    assert torch.allclose(output, torch.nn.LogSoftmax(dim=1)(fc3_output))
+else:
+    sequential_model = ToySequentialModel()
+
+    # Do this if you want all, if not you can see below.
+    # for name, layer in sequential_model.named_modules():
+    #     layer.register_forward_hook(get_intermediate_features(name))
+    sequential_model.head.fc2.register_forward_hook(
+        get_intermediate_features("head.fc2")
+    )
+    sequential_model.head.fc3.register_forward_hook(
+        get_intermediate_features("head.fc3")
+    )
+    sequential_model_output = sequential_model(x)
+    print(activation)
+    fc2_output = activation["head.fc2"]
+    fc3_output = activation["head.fc3"]
+    assert torch.allclose(
+        sequential_model_output, torch.nn.LogSoftmax(dim=1)(fc3_output)
+    )

@@ -1,45 +1,40 @@
 from __future__ import generators, print_function
 
-import os
-import sys
-
+import shutil
 from pathlib import Path
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import torch
+import typer
+import wandb
+from config import config, global_params
 from pytorch_grad_cam import GradCAM
 from pytorch_grad_cam.utils.image import show_cam_on_image
+from torch._C import device
+from typing import Union
 
+from src import (
+    dataset,
+    inference,
+    lr_finder,
+    metrics,
+    models,
+    plot,
+    prepare,
+    trainer,
+    transformation,
+    utils,
+)
 
 # BASE_DIR = Path(__file__).parent.parent.absolute().__str__()
 # sys.path.append(BASE_DIR)
 
+# TODO:  When PyTorch's DataLoader's num_workers is greater than 1, the group id is initiated multiple times. Not only that
+#        but the runnable code in models.py get executed multiple times as well: https://discuss.pytorch.org/t/file-gets-executed-multiple-times-when-using-num-workers-0-in-torch-utils-data-dataloader/19332
 
-from typing import Any, Callable, Dict, List, Optional, Union
-
-import numpy as np
-import pandas as pd
-
-import torch
-
-import typer
-from sklearn import metrics
-
-from src import (
-    plot,
-    prepare,
-    transformation,
-    utils,
-    models,
-    inference,
-    trainer,
-    dataset,
-    lr_finder,
-    metrics,
-)
-from config import config, global_params
-from torch._C import device
-
-import gc
-import wandb
-import matplotlib.pyplot as plt
+# TODO: Gradient Accum and Mixup code can be referenced from Petfinder.
 
 FILES = global_params.FilePaths()
 FOLDS = global_params.MakeFolds()
@@ -47,9 +42,17 @@ MODEL_PARAMS = global_params.ModelParams()
 LOADER_PARAMS = global_params.DataLoaderParams()
 TRAIN_PARAMS = global_params.GlobalTrainParams()
 WANDB_PARAMS = global_params.WandbParams()
+LOGS_PARAMS = global_params.LogsParams()
+MODEL_ARTIFACTS_PATH = global_params.FilePaths().get_model_artifacts_path()
 
 device = config.DEVICE
 
+main_logger = config.init_logger(
+    log_file=Path.joinpath(LOGS_PARAMS.LOGS_DIR_RUN_ID, "main.log"),
+    module_name="main",
+)
+
+shutil.copy(FILES.global_params_path, LOGS_PARAMS.LOGS_DIR_RUN_ID)
 
 # Typer CLI app
 app = typer.Typer()
@@ -63,7 +66,7 @@ def download_data():
     # datasets.MNIST(root=config.DATA_DIR.absolute(), train=False, download=True)
     # Save data
 
-    config.logger.info("Data downloaded!")
+    main_logger.info("Data downloaded!")
 
 
 def wandb_init(fold: int):
@@ -79,6 +82,13 @@ def wandb_init(fold: int):
         "Train_Params": TRAIN_PARAMS.to_dict(),
         "Model_Params": MODEL_PARAMS.to_dict(),
         "Loader_Params": LOADER_PARAMS.to_dict(),
+        "File_Params": FILES.to_dict(),
+        "Wandb_Params": WANDB_PARAMS.to_dict(),
+        "Folds_Params": FOLDS.to_dict(),
+        "Augment_Params": global_params.AugmentationParams().to_dict(),
+        "Criterion_Params": global_params.CriterionParams().to_dict(),
+        "Scheduler_Params": global_params.SchedulerParams().to_dict(),
+        "Optimizer_Params": global_params.OptimizerParams().to_dict(),
     }
 
     wandb_run = wandb.init(
@@ -115,11 +125,28 @@ def log_gradcam(curr_fold_best_checkpoint, df_oof, plot_gradcam: bool = True):
     if "vit" in MODEL_PARAMS.model_name:
         # blocks[-1].norm1  # for vit models use this, note this is using TIMM backbone.
         target_layers = [model.backbone.blocks[-1].norm1]
+
     elif "efficientnet" in MODEL_PARAMS.model_name:
         target_layers = [model.backbone.conv_head]
         reshape_transform = None
+
     elif "resnet" in MODEL_PARAMS.model_name:
         target_layers = [model.backbone.layer4[-1]]
+
+    elif "swin" in MODEL_PARAMS.model_name:
+        # https://github.com/jacobgil/pytorch-grad-cam/blob/master/usage_examples/swinT_example.py
+        # TODO: Note this does not work for swin 384 as the size is not (7, 7)
+        def reshape_transform(tensor, height=7, width=7):
+            result = tensor.reshape(
+                tensor.size(0), height, width, tensor.size(2)
+            )
+
+            # Bring the channels to the first dimension,
+            # like in CNNs.
+            result = result.permute(0, 3, 1, 2)
+            return result
+
+        target_layers = [model.backbone.layers[-1].blocks[-1].norm1]
 
     # load gradcam_dataset
     gradcam_dataset = dataset.CustomDataset(
@@ -146,9 +173,9 @@ def log_gradcam(curr_fold_best_checkpoint, df_oof, plot_gradcam: bool = True):
         gradcam_output = gradcam(input_tensor=X_unsqueezed)
         original_image = original_image.cpu().detach().numpy() / 255.0
         y_true = y.cpu().detach().numpy()
-        y_pred = df_oof.loc[df_oof["image_id"] == image_id, "oof_preds"].values[
-            0
-        ]
+        y_pred = df_oof.loc[
+            df_oof[FOLDS.image_col_name] == image_id, "oof_preds"
+        ].values[0]
 
         assert (
             original_image.shape[-1] == 3
@@ -201,12 +228,16 @@ def train_one_fold(
     if is_plot:
         image_grid = plot.show_image(
             loader=train_loader,
-            nrows=1,
-            ncols=1,
             mean=[0.485, 0.456, 0.406],
             std=[0.229, 0.224, 0.225],
+            one_channel=False,
         )
-        # TODO: add image_grid to wandb.
+
+        images = wandb.Image(
+            np.transpose(image_grid, (1, 2, 0)),
+            caption="Top: Output, Bottom: Input",
+        )
+        wandb.log({"examples": images})
 
     # Model, cost function and optimizer instancing
     model = models.CustomNeuralNet().to(device)
@@ -226,6 +257,7 @@ def train_one_fold(
     reighns_trainer: trainer.Trainer = trainer.Trainer(
         params=TRAIN_PARAMS,
         model=model,
+        model_artifacts_path=MODEL_ARTIFACTS_PATH,
         device=device,
         wandb_run=wandb_run,
     )
@@ -242,7 +274,9 @@ def train_one_fold(
     df_oof["oof_trues"] = curr_fold_best_checkpoint["oof_trues"]
     df_oof["oof_preds"] = curr_fold_best_checkpoint["oof_preds"]
 
-    df_oof.to_csv(Path(FILES.oof_csv, f"oof_fold_{fold}.csv"), index=False)
+    df_oof.to_csv(
+        Path(MODEL_ARTIFACTS_PATH, f"oof_fold_{fold}.csv"), index=False
+    )
     if is_gradcam:
         # TODO: df_oof['error_analysis'] = todo - error analysis by ranking prediction confidence and plot gradcam for top 10 and bottom 10.
         gradcam_table = log_gradcam(
@@ -276,12 +310,9 @@ def train_loop(*args, **kwargs):
         # print("\n\n\nOOF Score for Fold {}: {}\n\n\n".format(fold, curr_fold_best_score))
 
     cv_mean_d, cv_std_d = metrics.calculate_cv_metrics(df_oof)
-    config.logger.info(f"\n\n\nMEAN CV: {cv_mean_d}\n\n\n")
-    config.logger.info(f"\n\n\nSTD CV: {cv_std_d}\n\n\n")
+    main_logger.info(f"\nMEAN CV: {cv_mean_d}\nSTD CV: {cv_std_d}")
 
-    # print("Five Folds OOF", get_oof_roc(config, oof_df))
-
-    df_oof.to_csv(Path(FILES.oof_csv, "oof.csv"), index=False)
+    df_oof.to_csv(Path(MODEL_ARTIFACTS_PATH, "oof.csv"), index=False)
 
     return df_oof
 
@@ -292,14 +323,37 @@ if __name__ == "__main__":
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data()
 
-    is_inference = False
+    is_inference = True
     if not is_inference:
+        # caution turn on is_plot or is_forward_pass etc will not have the same run results vs not turned on since initialized is diff.
         df_oof = train_loop(
             df_folds=df_folds, is_plot=False, is_forward_pass=False
         )
 
-    # model_dir = Path(FILES.weight_path, MODEL_PARAMS.model_name).__str__()
     else:
-        model_dir = r"C:\Users\reighns\kaggle_projects\cassava\model\tf_efficientnet_b0_ns"
-        predictions = inference.inference(df_test, model_dir, df_sub)
+        # TODO: model_dir is defined hardcoded, consider be able to pull the exact path from the saved logs/models from wandb even?
+
+        model_dir = Path(
+            r"C:\Users\reighns\reighns_ml\pytorch_pipeline\stores\model\tf_efficientnet_b4_ns_tf_efficientnet_b4_ns_5_folds_9au8inn1"
+        )
+
+        weights = utils.return_list_of_files(
+            directory=model_dir, return_string=True, extension=".pt"
+        )
+        model = models.CustomNeuralNet(
+            model_name="tf_efficientnet_b4_ns",
+            out_features=5,
+            in_channels=3,
+            pretrained=False,
+        ).to(device)
+        transform_dict = transformation.get_inference_transforms()
+        predictions = inference.inference(
+            df_test=df_test,
+            model_dir=model_dir,
+            model=model,
+            df_sub=df_test,
+            transform_dict=transform_dict,
+        )
+        # TODO: Note that I printed out predictions with notebook CASSAVA: tf_efficientnet_b4_ns_5_folds_9au8inn1 and both get same preds.
+        # TODO: add gradcam support for inference.
         # _ = inference.show_gradcam()

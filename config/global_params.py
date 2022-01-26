@@ -1,44 +1,61 @@
 from dataclasses import dataclass, field, asdict
 import pandas as pd
-import pathlib
 from typing import Any, Dict, List
 from config import config
 import wandb
+from pathlib import Path
 
 
 @dataclass
 class FilePaths:
     """Class to keep track of the files."""
 
-    train_images: pathlib.Path = pathlib.Path(
+    train_images: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/train"
     )
-    test_images: pathlib.Path = pathlib.Path(
+    test_images: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/test"
     )
-    train_csv: pathlib.Path = pathlib.Path(
+    train_csv: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/raw/train.csv"
     )
-    test_csv: pathlib.Path = pathlib.Path(
+    test_csv: Path = Path(
         config.DATA_DIR, "cassava_leaf_disease_classification/raw/test.csv"
     )
-    sub_csv: pathlib.Path = pathlib.Path(
+    sub_csv: Path = Path(
         config.DATA_DIR,
         "cassava_leaf_disease_classification/raw/sample_submission.csv",
     )
-    folds_csv: pathlib.Path = pathlib.Path(
+    folds_csv: Path = Path(
         config.DATA_DIR,
         "cassava_leaf_disease_classification/processed/train.csv",
     )
-    weight_path: pathlib.Path = pathlib.Path(config.MODEL_DIR)
-    oof_csv: pathlib.Path = pathlib.Path(
-        config.DATA_DIR, "cassava_leaf_disease_classification/processed"
-    )
-    wandb_dir: pathlib.Path = pathlib.Path(config.WANDB_DIR)
+    weight_path: Path = Path(config.MODEL_REGISTRY)
+
+    wandb_dir: Path = Path(config.WANDB_DIR)
+
+    global_params_path: Path = Path(config.CONFIG_DIR, "global_params.py")
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
+
+    def get_model_artifacts_path(self) -> Path:
+        """Returns the model artifacts path.
+
+        Returns:
+            Path(model_artifacts_path) (Path): Model artifacts path.
+        """
+        # model_artifacts_path stores model weights, oof, etc. Note that now the model save path has wandb_run's group id appended for me to easily recover which run corresponds to which model.
+        # create model directory if not exist and model_directory with run_id to identify easily.
+
+        model_artifacts_path: Path = Path(
+            self.weight_path,
+            f"{ModelParams().model_name}_{WandbParams().group}",
+        )
+        Path.mkdir(model_artifacts_path, parents=True, exist_ok=True)
+        # oof_csv: Path = Path(model_artifacts_path)
+        return model_artifacts_path
 
 
 @dataclass
@@ -119,12 +136,8 @@ class MakeFolds:
     cv_schema: str = "StratifiedKFold"
     class_col_name: str = "label"
     image_col_name: str = "image_id"
-
-    # TODO: To connect with FILES
-    folds_csv: pathlib.Path = pathlib.Path(
-        config.DATA_DIR,
-        "cassava_leaf_disease_classification/processed/train.csv",
-    )
+    image_extension: str = ""  # ".jpg"
+    folds_csv: Path = FilePaths().folds_csv
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
@@ -175,6 +188,10 @@ class CriterionParams:
         }
     )
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
+
 
 @dataclass
 class ModelParams:
@@ -189,7 +206,7 @@ class ModelParams:
     classification_type (str): classification type.
     """
 
-    model_name: str = "tf_efficientnet_b0_ns"  # Debug
+    model_name: str = "tf_efficientnet_b4_ns"  # Debug use tf_efficientnet_b0_ns else tf_efficientnet_b4_ns
 
     pretrained: bool = True
     input_channels: int = 3
@@ -215,9 +232,9 @@ class ModelParams:
 
 @dataclass
 class GlobalTrainParams:
-    debug: bool = True
+    debug: bool = False
     debug_multipler: int = 2
-    epochs: int = 2  # 1 or 2 when debug
+    epochs: int = 10  # 1 or 2 when debug
     use_amp: bool = True
     mixup: bool = AugmentationParams().mixup
     patience: int = 2
@@ -242,7 +259,7 @@ class OptimizerParams:
     optimizer_name: str = "AdamW"
     optimizer_params: Dict[str, Any] = field(
         default_factory=lambda: {
-            "lr": 1e-3,
+            "lr": 3e-4,
             "betas": (0.9, 0.999),
             "amsgrad": False,
             "weight_decay": 1e-3,
@@ -298,6 +315,26 @@ class WandbParams:
     # add an unique group id behind group name.
     group: str = f"{GlobalTrainParams().model_name}_{MakeFolds().num_folds}_folds_{wandb.util.generate_id()}"
     dir: str = FilePaths().wandb_dir
+    print(f"wandb run group: {group}")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return asdict(self)
+
+
+@dataclass
+class LogsParams:
+    """A class to track logging parameters."""
+
+    # TODO: Slightly unclear as we decouple the mkdir logic from config.py. May consider to move it to config.py somehow.
+    # What is preventing this is I need to pass in the run id from WANDB to the logs folder. Same happens in trainer.py when creating model dir.
+    LOGS_DIR_RUN_ID = Path.joinpath(
+        config.LOGS_DIR, f"run_id_{WandbParams().group}"
+    )
+    Path.mkdir(LOGS_DIR_RUN_ID, parents=True, exist_ok=True)
+
+    if not LOGS_DIR_RUN_ID.exists():
+        Path.mkdir(LOGS_DIR_RUN_ID, parents=True, exist_ok=True)
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""

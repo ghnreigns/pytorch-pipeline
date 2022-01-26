@@ -75,3 +75,46 @@ forward_X, forward_y, model_summary = models.forward_pass(
 ## Augmentations
 
 [Reference on RandomResizedCrop](https://machinelearningmastery.com/best-practices-for-preparing-and-augmenting-image-data-for-convolutional-neural-networks/). So albumentation's has default parameters same as the article.
+
+
+## Miscellaneous
+
+### Static Methods
+
+In `trainer.py`, we used quite a few static methods. According to [geeksforgeeks](https://www.geeksforgeeks.org/class-method-vs-static-method-python/), static methods are methods that are called without creating an instance of the class, and are often used as utility functions. One immediate convenience is the method `get_sigmoid_softmax()` which returns either `nn.Sigmoid()` or `nn.Softmax()` depending on the loss function. I then also need to use it again in `inference.py`. I can just do the following:
+
+```python
+from src import trainer
+print(trainer.Trainer.get_sigmoid_softmax()) -> nn.Sigmoid()
+```
+
+Notice that I can use the `get_sigmoid_softmax()` method in `inference.py` without creating an instance of the class.
+
+
+## Coding Pitfalls
+
+### Mutable Default Arguments
+
+https://docs.python-guide.org/writing/gotchas/
+
+### Dataclasses Call Functions Below
+
+```python
+def get_model_artifacts_path(self) -> Path:
+    """Returns the model artifacts path.
+
+    Returns:
+        Path(model_artifacts_path) (Path): Model artifacts path.
+    """
+    # model_artifacts_path stores model weights, oof, etc. Note that now the model save path has wandb_run's group id appended for me to easily recover which run corresponds to which model.
+    # create model directory if not exist and model_directory with run_id to identify easily.
+
+    model_artifacts_path: Path = Path(
+        self.weight_path,
+        f"{ModelParams().model_name}_{WandbParams().group}",
+    )
+    Path.mkdir(model_artifacts_path, parents=True, exist_ok=True)
+    # oof_csv: Path = Path(model_artifacts_path)
+    return model_artifacts_path
+```
+In `FilePaths` we defined a method to call `WandbParams()` which is below this function. This is possible however if you do not define it in the method, it is not possible, maybe due to late closure binding?

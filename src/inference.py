@@ -1,7 +1,8 @@
 import collections
-import glob
-from typing import Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Union
 
+import albumentations
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -9,12 +10,18 @@ import torch
 from config import config, global_params
 from tqdm.auto import tqdm
 
-from src import dataset, models, transformation
+from src import dataset, models, utils, trainer
 
 MODEL = global_params.ModelParams()
 FOLDS = global_params.MakeFolds()
 LOADER_PARAMS = global_params.DataLoaderParams()
+FILES = global_params.FilePaths()
+WANDB = global_params.WandbParams()
 device = config.DEVICE
+
+# TODO: The MODEL_ARTIFACTS_PATH will not be persistent if one is to inference on a new run, so how?
+MODEL_ARTIFACTS_PATH = global_params.FilePaths().get_model_artifacts_path()
+# 1. Push all inferenced models and oof and submissions to the same folder with the model weights.
 
 
 def inference_all_folds(
@@ -37,7 +44,7 @@ def inference_all_folds(
     model.eval()
 
     with torch.no_grad():
-        all_folds_preds = []
+        all_folds_probs = []
 
         for _fold_num, state in enumerate(state_dicts):
             if "model_state_dict" not in state:
@@ -45,39 +52,43 @@ def inference_all_folds(
             else:
                 model.load_state_dict(state["model_state_dict"])
 
-            current_fold_preds = []
+            current_fold_probs = []
 
             for data in tqdm(test_loader, position=0, leave=True):
                 images = data["X"].to(device, non_blocking=True)
-                logits = model(images)
-                test_prob = (
-                    torch.nn.Softmax(dim=1)(input=logits).to("cpu").numpy()
+                test_logits = model(images)
+                test_probs = (
+                    trainer.Trainer.get_sigmoid_softmax()(test_logits)
+                    .cpu()
+                    .numpy()
                 )
 
-                current_fold_preds.append(test_prob)
+                current_fold_probs.append(test_probs)
 
-            current_fold_preds = np.concatenate(current_fold_preds, axis=0)
-            all_folds_preds.append(current_fold_preds)
-        mean_preds = np.mean(all_folds_preds, axis=0)
+            current_fold_probs = np.concatenate(current_fold_probs, axis=0)
+            all_folds_probs.append(current_fold_probs)
+        mean_preds = np.mean(all_folds_probs, axis=0)
     return mean_preds
-
-
-# TODO: See my latest PyTorch to change the transform outside of function and as an argument.
-# TODO: Move model as argument too.
 
 
 def inference(
     df_test: pd.DataFrame,
-    model_dir: str,
+    model_dir: Union[str, Path],
+    model: Union[models.CustomNeuralNet, Any],
+    transform_dict: Dict[str, albumentations.Compose],
     df_sub: pd.DataFrame = None,
 ) -> Dict[str, np.ndarray]:
+
     """Inference the model and perform TTA, if any.
 
     Dataset and Dataloader are constructed within this function because of TTA.
+    model and transform_dict are passed as arguments to enable inferencing multiple different models.
 
     Args:
         df_test (pd.DataFrame): The test dataframe.
-        model_dir (str): model directory for the model.
+        model_dir (str, Path): model directory for the model.
+        model (Union[models.CustomNeuralNet, Any]): The model to be used for inference. Note that pretrained should be set to False.
+        transform_dict (Dict[str, albumentations.Compose]): The dictionary of transforms to be used for inference. Should call from get_inference_transforms().
         df_sub (pd.DataFrame, optional): The submission dataframe. Defaults to None.
 
     Returns:
@@ -91,13 +102,13 @@ def inference(
         df_sub = df_test.copy()
 
     all_preds = {}
+    model = model.to(device)
 
-    model = models.CustomNeuralNet(pretrained=False).to(device)
+    # Take note I always save my torch models as .pt files. Note we must return paths as str as torch.load does not support pathlib.
+    weights = utils.return_list_of_files(
+        directory=model_dir, return_string=True, extension=".pt"
+    )
 
-    transform_dict = transformation.get_inference_transforms()
-
-    # TODO: glob.glob does not preserve sequence... means we need order by lexiographic order. sorted(list([model_path for model_path in glob.glob(model_dir + "/*.pt")]))
-    weights = [model_path for model_path in glob.glob(model_dir + "/*.pt")]
     state_dicts = [torch.load(path)["model_state_dict"] for path in weights]
 
     # Loop over each TTA transforms, if TTA is none, then loop once over normal inference_augs.
@@ -111,14 +122,16 @@ def inference(
         predictions = inference_all_folds(
             model=model, state_dicts=state_dicts, test_loader=test_loader
         )
-
         all_preds[aug_name] = predictions
 
         ################# To change when necessary depending on the metrics needed for submission #################
+        # TODO: Consider returning a list of predictions ranging from np.argmax to preds, probs etc, and this way we can use whichever from the output? See my petfinder for more.
         df_sub[FOLDS.class_col_name] = np.argmax(predictions, axis=1)
 
         df_sub[[FOLDS.image_col_name, FOLDS.class_col_name]].to_csv(
-            f"submission_{aug_name}.csv", index=False
+            Path(
+                MODEL_ARTIFACTS_PATH, f"submission_{aug_name}.csv", index=False
+            )
         )
         print(df_sub.head())
 

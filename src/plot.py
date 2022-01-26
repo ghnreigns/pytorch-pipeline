@@ -1,8 +1,8 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import random
-import torch
 from typing import List
+
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 import torchvision
 
 
@@ -44,24 +44,27 @@ def unnormalize(
     return unnormalized
 
 
-# TODO: Consider adding plot size as in notebook it is too small. Also to add label and image id name beside title.
 def show_image(
     loader: torch.utils.data.DataLoader,
-    nrows: int = 3,
-    ncols: int = 4,
-    mean: List[float] = [0.485, 0.456, 0.406],
-    std: List[float] = [0.229, 0.224, 0.225],
+    mean: List[float] = None,
+    std: List[float] = None,
     one_channel: bool = False,
 ):
     """Plot a grid of image from Dataloader.
 
+    Mutable Default Arguments are not encouraged, but I won't be using operations like append inside the func.
+
     Args:
-        train_dataset (torch.utils.data.Dataset): [description]
-        nrows (int, optional): [description]. Defaults to 3.
-        ncols (int, optional): [description]. Defaults to 4.
-        mean (List[float], optional): [description]. Defaults to None.
-        std (List[float], optional): [description]. Defaults to None.
+        loader (torch.utils.data.DataLoader): The dataloader to be used.
+        mean (List[float], optional): Here we are using ImageNet mean. Defaults to [0.485, 0.456, 0.406].
+        std (List[float], optional): Here we are using ImageNet std. Defaults to [0.229, 0.224, 0.225].
+        one_channel (bool, optional): If True, treat as grayscale. Defaults to False.
     """
+
+    if mean is None:
+        mean = [0.485, 0.456, 0.406]
+    if std is None:
+        std = [0.229, 0.224, 0.225]
 
     dataiter = iter(loader)
 
@@ -70,7 +73,6 @@ def show_image(
         dataiter.next()["y"],
     )
 
-    # TODO: FIX UNNORMALIZE not showing properly.
     one_batch_images = [
         unnormalize(image, mean, std, max_pixel_value=255.0)
         for image in one_batch_images
@@ -82,28 +84,17 @@ def show_image(
     if one_channel:
         pass
 
-    image_grid = image_grid.numpy()
+    # Necessary to cast to int if not it will not show properly.
+    image_grid = image_grid.numpy().astype(int)
+    plt.figure(figsize=(20, 10))
+
     if one_channel:
         plt.imshow(image_grid, cmap="Greys")
     else:
         plt.imshow(np.transpose(image_grid, (1, 2, 0)))
+
+    # TODO: Consider add label and image id name beside title. https://discuss.pytorch.org/t/add-label-captions-to-make-grid/42863/4
+    plt.title(f"Labels: {one_batch_targets.numpy()}")
     plt.show()
 
     return image_grid
-
-    # show images
-    # matplotlib_imshow(img_grid, one_channel=True)
-    # plt.figure(figsize=(20, 10))
-
-    # for _ in range(nrows):
-    #     for col in range(ncols):
-
-    #         rand = random.randint(0, len(train_dataset))
-    #         image, label = train_dataset[rand]["X"], train_dataset[rand]["y"]
-    #         image = unnormalize(image, mean, std, max_pixel_value=255.0)
-
-    #         plt.subplot(1, ncols, col % ncols + 1)
-    #         plt.axis("off")
-    #         plt.imshow(image.permute(2, 1, 0))
-    #         plt.title(f"Pawpularity: {label}")
-    #         plt.show()
