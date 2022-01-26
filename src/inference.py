@@ -18,6 +18,8 @@ LOADER_PARAMS = global_params.DataLoaderParams()
 FILES = global_params.FilePaths()
 WANDB = global_params.WandbParams()
 device = config.DEVICE
+
+# TODO: The MODEL_ARTIFACTS_PATH will not be persistent if one is to inference on a new run, so how?
 MODEL_ARTIFACTS_PATH = global_params.FilePaths().get_model_artifacts_path()
 # 1. Push all inferenced models and oof and submissions to the same folder with the model weights.
 
