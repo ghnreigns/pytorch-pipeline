@@ -327,7 +327,11 @@ if __name__ == "__main__":
     if not is_inference:
         # caution turn on is_plot or is_forward_pass etc will not have the same run results vs not turned on since initialized is diff.
         df_oof = train_loop(
-            df_folds=df_folds, is_plot=False, is_forward_pass=False
+            df_folds=df_folds,
+            is_plot=False,
+            is_forward_pass=True,
+            is_gradcam=False,
+            is_find_lr=False,
         )
 
     else:

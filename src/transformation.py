@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import albumentations
 from albumentations.pytorch.transforms import ToTensorV2
+import cv2
 from config import global_params
 
 TRANSFORMS = global_params.AugmentationParams()
@@ -29,23 +30,31 @@ def get_train_transforms(
                 scale=(0.08, 1.0),
                 ratio=(0.75, 1.3333333333333333),
             ),
-            albumentations.RandomRotate90(p=0.5),
-            albumentations.HorizontalFlip(p=0.5),
+            albumentations.OneOf(
+                [
+                    albumentations.RandomBrightness(limit=(0.1), p=0.5),
+                    albumentations.RandomContrast(limit=(0.1), p=0.5),
+                ],
+                p=1,
+            ),
+            albumentations.OneOf(
+                [
+                    albumentations.MotionBlur(blur_limit=3),
+                    albumentations.MedianBlur(blur_limit=3),
+                    albumentations.GaussianBlur(blur_limit=3),
+                ],
+                p=0.5,
+            ),
             albumentations.VerticalFlip(p=0.5),
-            albumentations.Cutout(p=0.5),
-            # albumentations.CoarseDropout(
-            #     max_holes=8,
-            #     max_height=8,
-            #     max_width=8,
-            #     min_holes=None,
-            #     min_height=None,
-            #     min_width=None,
-            #     fill_value=0,
-            #     mask_fill_value=None,
-            #     always_apply=False,
-            #     p=0.5,
-            # ),
-            albumentations.Resize(image_size, image_size),
+            albumentations.HorizontalFlip(p=0.5),
+            albumentations.ShiftScaleRotate(
+                shift_limit=0.2,
+                scale_limit=0.2,
+                rotate_limit=20,
+                interpolation=cv2.INTER_LINEAR,
+                border_mode=cv2.BORDER_REFLECT_101,
+                p=1,
+            ),
             albumentations.Normalize(
                 mean=TRANSFORMS.mean,
                 std=TRANSFORMS.std,
