@@ -150,7 +150,7 @@ class AugmentationParams:
 
     mean: List[float] = field(default_factory=lambda: [0.485, 0.456, 0.406])
     std: List[float] = field(default_factory=lambda: [0.229, 0.224, 0.225])
-    image_size: int = 256
+    image_size: int = 512
     mixup: bool = False
     mixup_params: Dict[str, Any] = field(
         default_factory=lambda: {"mixup_alpha": 1, "use_cuda": True}
@@ -206,7 +206,7 @@ class ModelParams:
     classification_type (str): classification type.
     """
 
-    model_name: str = "tf_efficientnet_b5_ns"  # resnext50_32x4d "tf_efficientnet_b0_ns"  # Debug use tf_efficientnet_b0_ns else tf_efficientnet_b4_ns
+    model_name: str = "resnext50_32x4d"  # resnext50_32x4d "tf_efficientnet_b0_ns"  # Debug use tf_efficientnet_b0_ns else tf_efficientnet_b4_ns
 
     pretrained: bool = True
     input_channels: int = 3

@@ -32,6 +32,7 @@ def return_filepath(
     Returns:
         image_path (str): The path to the image: "c:\\users\\reighns\\kaggle_projects\\cassava\\data\\train\\1000015157.jpg"
     """
+    # TODO: Consider using Path instead os for consistency.
     image_path = os.path.join(folder, f"{image_id}{extension}")
     return image_path
 
@@ -74,6 +75,7 @@ def prepare_loaders(
 ) -> Union[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """Prepare Data Loaders."""
     # TODO: To uncomment random_state after checking.
+    # TODO: Fix debug_multiplier typo
     if TRAIN_PARAMS.debug:
         df_train = df_folds[df_folds["fold"] != fold].sample(
             LOADER_PARAMS.train_loader["batch_size"]
