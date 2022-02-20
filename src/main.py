@@ -329,8 +329,8 @@ if __name__ == "__main__":
         df_oof = train_loop(
             df_folds=df_folds,
             is_plot=False,
-            is_forward_pass=True,
-            is_gradcam=False,
+            is_forward_pass=False,
+            is_gradcam=True,
             is_find_lr=False,
         )
 
