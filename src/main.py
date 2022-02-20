@@ -377,7 +377,7 @@ if __name__ == "__main__":
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data(pipeline_config)
 
-    is_inference = False
+    is_inference = True
     if not is_inference:
         # caution turn on is_plot or is_forward_pass etc will not have the same run results vs not turned on since initialized is diff.
         df_oof = train_loop(
@@ -391,7 +391,21 @@ if __name__ == "__main__":
 
     else:
         # TODO: model_dir is defined hardcoded, consider be able to pull the exact path from the saved logs/models from wandb even?
-
+        INFERENCE_TRANSFORMS = global_params.AugmentationParams(image_size=256)
+        # INFERENCE_MODEL_PARAMS = global_params.ModelParams()
+        inference_pipeline_config = global_params.PipelineConfig(
+            files=FILES,
+            loader_params=LOADER_PARAMS,
+            folds=FOLDS,
+            transforms=INFERENCE_TRANSFORMS,
+            model_params=MODEL_PARAMS,
+            global_train_params=GLOBAL_TRAIN_PARAMS,
+            wandb_params=WANDB_PARAMS,
+            logs_params=LOGS_PARAMS,
+            criterion_params=CRITERION_PARAMS,
+            scheduler_params=SCHEDULER_PARAMS,
+            optimizer_params=OPTIMIZER_PARAMS,
+        )
         model_dir = Path(
             r"C:\Users\reighns\reighns_ml\pytorch_pipeline\stores\model\tf_efficientnet_b4_ns_tf_efficientnet_b4_ns_5_folds_9au8inn1"
         )
@@ -406,7 +420,7 @@ if __name__ == "__main__":
             pretrained=False,
         ).to(device)
         transform_dict = transformation.get_inference_transforms(
-            pipeline_config
+            pipeline_config=inference_pipeline_config,
         )
         predictions = inference.inference(
             df_test=df_test,
@@ -414,6 +428,7 @@ if __name__ == "__main__":
             model=model,
             df_sub=df_test,
             transform_dict=transform_dict,
+            pipeline_config=inference_pipeline_config,
         )
         # TODO: Note that I printed out predictions with notebook CASSAVA: tf_efficientnet_b4_ns_5_folds_9au8inn1 and both get same preds.
         # TODO: add gradcam support for inference.

@@ -12,11 +12,7 @@ from tqdm.auto import tqdm
 
 from src import dataset, models, utils, trainer
 
-MODEL = global_params.ModelParams()
-FOLDS = global_params.MakeFolds()
-LOADER_PARAMS = global_params.DataLoaderParams()
-FILES = global_params.FilePaths()
-WANDB = global_params.WandbParams()
+
 device = config.DEVICE
 
 # TODO: The MODEL_ARTIFACTS_PATH will not be persistent if one is to inference on a new run, so how?
@@ -28,6 +24,7 @@ def inference_all_folds(
     model: models.CustomNeuralNet,
     state_dicts: List[collections.OrderedDict],
     test_loader: torch.utils.data.DataLoader,
+    pipeline_config: global_params.PipelineConfig,
 ) -> np.ndarray:
     """Inference the model on all K folds.
 
@@ -58,7 +55,7 @@ def inference_all_folds(
                 images = data["X"].to(device, non_blocking=True)
                 test_logits = model(images)
                 test_probs = (
-                    trainer.Trainer.get_sigmoid_softmax()(test_logits)
+                    trainer.get_sigmoid_softmax(pipeline_config)(test_logits)
                     .cpu()
                     .numpy()
                 )
@@ -76,6 +73,7 @@ def inference(
     model_dir: Union[str, Path],
     model: Union[models.CustomNeuralNet, Any],
     transform_dict: Dict[str, albumentations.Compose],
+    pipeline_config: global_params.PipelineConfig,
     df_sub: pd.DataFrame = None,
 ) -> Dict[str, np.ndarray]:
 
@@ -120,18 +118,29 @@ def inference(
             mode="test",
         )
         test_loader = torch.utils.data.DataLoader(
-            test_dataset, **LOADER_PARAMS.test_loader
+            test_dataset, **pipeline_config.loader_params.test_loader
         )
         predictions = inference_all_folds(
-            model=model, state_dicts=state_dicts, test_loader=test_loader
+            model=model,
+            state_dicts=state_dicts,
+            test_loader=test_loader,
+            pipeline_config=pipeline_config,
         )
+        print(predictions)
         all_preds[aug_name] = predictions
 
         ################# To change when necessary depending on the metrics needed for submission #################
         # TODO: Consider returning a list of predictions ranging from np.argmax to preds, probs etc, and this way we can use whichever from the output? See my petfinder for more.
-        df_sub[FOLDS.class_col_name] = np.argmax(predictions, axis=1)
+        df_sub[pipeline_config.folds.class_col_name] = np.argmax(
+            predictions, axis=1
+        )
 
-        df_sub[[FOLDS.image_col_name, FOLDS.class_col_name]].to_csv(
+        df_sub[
+            [
+                pipeline_config.folds.image_col_name,
+                pipeline_config.folds.class_col_name,
+            ]
+        ].to_csv(
             Path(
                 MODEL_ARTIFACTS_PATH, f"submission_{aug_name}.csv", index=False
             )
@@ -139,5 +148,5 @@ def inference(
         print(df_sub.head())
 
         plt.figure(figsize=(12, 6))
-        plt.hist(df_sub[FOLDS.class_col_name], bins=100)
+        plt.hist(df_sub[pipeline_config.folds.class_col_name], bins=100)
     return all_preds

@@ -25,6 +25,27 @@ training_logger = config.init_logger(
 #       - usually logits is the direct output of a model, then apply sigmoid or softmax to get the probability probs, lastly apply argmax to get the class preds.
 
 
+def get_sigmoid_softmax(
+    pipeline_config,
+) -> Union[torch.nn.Sigmoid, torch.nn.Softmax]:
+    """Get the sigmoid or softmax function.
+
+    Returns:
+        Union[torch.nn.Sigmoid, torch.nn.Softmax]: [description]
+    """
+    if (
+        pipeline_config.criterion_params.train_criterion_name
+        == "BCEWithLogitsLoss"
+    ):
+        return getattr(torch.nn, "Sigmoid")()
+
+    if (
+        pipeline_config.criterion_params.train_criterion_name
+        == "CrossEntropyLoss"
+    ):
+        return getattr(torch.nn, "Softmax")(dim=1)
+
+
 class Trainer:
     """Object used to facilitate training."""
 
@@ -175,24 +196,6 @@ class Trainer:
         )
         loss = loss_fn(y_logits, y_true)
         return loss
-
-    def get_sigmoid_softmax(self) -> Union[torch.nn.Sigmoid, torch.nn.Softmax]:
-        """Get the sigmoid or softmax function.
-
-        Returns:
-            Union[torch.nn.Sigmoid, torch.nn.Softmax]: [description]
-        """
-        if (
-            self.pipeline_config.criterion_params.train_criterion_name
-            == "BCEWithLogitsLoss"
-        ):
-            return getattr(torch.nn, "Sigmoid")()
-
-        if (
-            self.pipeline_config.criterion_params.train_criterion_name
-            == "CrossEntropyLoss"
-        ):
-            return getattr(torch.nn, "Softmax")(dim=1)
 
     def get_classification_metrics(
         self,
@@ -535,7 +538,7 @@ class Trainer:
                 - average_cumulative_train_loss
             ) / (step)
 
-            _y_train_prob = self.get_sigmoid_softmax()(logits)
+            _y_train_prob = get_sigmoid_softmax(self.pipeline_config)(logits)
             _y_train_pred = torch.argmax(_y_train_prob, dim=1)
 
         # TODO: Consider enhancement that returns the same dict as valid_one_epoch.
@@ -579,7 +582,7 @@ class Trainer:
                 _batch_size = inputs.shape[0]
 
                 # TODO: Refer to my RANZCR notes on difference between Softmax and Sigmoid with examples.
-                y_valid_prob = self.get_sigmoid_softmax()(logits)
+                y_valid_prob = get_sigmoid_softmax(self.pipeline_config)(logits)
                 y_valid_pred = torch.argmax(y_valid_prob, axis=1)
 
                 curr_batch_val_loss = self.valid_criterion(
