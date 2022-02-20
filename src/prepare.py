@@ -102,7 +102,6 @@ def prepare_loaders(
             * pipeline_config.global_train_params.debug_multiplier,
             random_state=pipeline_config.folds.seed,
         )
-        # TODO: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sample.html | Consider adding stratified sampling to avoid df_valid having 0 num samples of minority class, causing issues when computing roc.
         df_oof = df_valid.copy()
 
     else:
@@ -113,11 +112,13 @@ def prepare_loaders(
 
     dataset_train = dataset.CustomDataset(
         df_train,
+        pipeline_config=pipeline_config,
         transforms=transformation.get_train_transforms(pipeline_config),
         mode="train",
     )
     dataset_valid = dataset.CustomDataset(
         df_valid,
+        pipeline_config=pipeline_config,
         transforms=transformation.get_valid_transforms(pipeline_config),
         mode="train",
     )

@@ -33,12 +33,20 @@ class AverageLossMeter:
         self.reset()
 
     def reset(self):
+        """To check PyTorch's code for resetting the loss meter."""
+
         self.curr_batch_avg_loss = 0
         self.avg = 0
         self.running_total_loss = 0
         self.count = 0
 
     def update(self, curr_batch_avg_loss: float, batch_size: str):
+        """To check PyTorch's code for updating the loss meter.
+
+        Args:
+            curr_batch_avg_loss (float): _description_
+            batch_size (str): _description_
+        """
         self.curr_batch_avg_loss = curr_batch_avg_loss
         self.running_total_loss += curr_batch_avg_loss * batch_size
         self.count += batch_size
@@ -53,11 +61,18 @@ class MetricMonitor:
         self.reset()
 
     def reset(self):
+        """To check PyTorch's code for resetting the metric monitor."""
         self.metrics = defaultdict(
             lambda: {"metric_score": 0, "count": 0, "average_score": 0}
         )
 
     def update(self, metric_name, metric_score):
+        """To check PyTorch's code for updating the loss meter.
+
+        Args:
+            metric_name (_type_): _description_
+            metric_score (_type_): _description_
+        """
         metric = self.metrics[metric_name]
 
         metric["metric_score"] += metric_score

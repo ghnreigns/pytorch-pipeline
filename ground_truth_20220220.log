@@ -98,3 +98,7 @@ Time Elapsed: 00:00:00
 Validation valid_macro_auroc improved from -inf to 0.3125
 2022-02-20 17:33:44: 
 Saving model with best valid valid_macro_auroc score: 0.3125
+
+2022-02-20 17:35:35: 
+MEAN CV: OrderedDict([('cv_mean_acc', 0.35), ('cv_mean_auroc', 0.36741585)])
+STD CV: OrderedDict([('cv_std_acc', 0.1457738), ('cv_std_auroc', 0.08646242)])

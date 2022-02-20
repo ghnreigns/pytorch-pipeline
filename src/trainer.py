@@ -1,3 +1,5 @@
+import os
+import shutil
 import time
 from pathlib import Path
 from typing import DefaultDict, Dict, Union
@@ -5,16 +7,10 @@ from typing import DefaultDict, Dict, Union
 import numpy as np
 import torch
 from config import config, global_params
-import shutil
-
 from tqdm.auto import tqdm
-import os
+
 from src import callbacks, metrics, models, utils
 
-FILES = global_params.FilePaths()
-CRITERION_PARAMS = global_params.CriterionParams()
-SCHEDULER_PARAMS = global_params.SchedulerParams()
-OPTIMIZER_PARAMS = global_params.OptimizerParams()
 LOGS_PARAMS = global_params.LogsParams()
 
 training_logger = config.init_logger(
@@ -34,7 +30,7 @@ class Trainer:
 
     def __init__(
         self,
-        params: global_params.GlobalTrainParams,
+        pipeline_config: global_params.PipelineConfig,
         model: models.CustomNeuralNet,
         model_artifacts_path: Union[str, Path],
         device=torch.device("cpu"),
@@ -42,7 +38,8 @@ class Trainer:
         early_stopping: callbacks.EarlyStopping = None,
     ):
         # Set params
-        self.params = params
+        self.pipeline_config = pipeline_config
+        self.params = self.pipeline_config.global_train_params
         self.model = model
         self.model_path = model_artifacts_path
         self.device = device
@@ -52,10 +49,12 @@ class Trainer:
 
         # TODO: To ask Ian if initializing the optimizer in constructor is a good idea? Should we init it outside of the class like most people do? In particular, the memory usage.
         self.optimizer = self.get_optimizer(
-            model=self.model, optimizer_params=OPTIMIZER_PARAMS
+            model=self.model,
+            optimizer_params=self.pipeline_config.optimizer_params,
         )
         self.scheduler = self.get_scheduler(
-            optimizer=self.optimizer, scheduler_params=SCHEDULER_PARAMS
+            optimizer=self.optimizer,
+            scheduler_params=self.pipeline_config.scheduler_params,
         )
 
         if self.params.use_amp:
@@ -81,7 +80,7 @@ class Trainer:
     @staticmethod
     def get_optimizer(
         model: models.CustomNeuralNet,
-        optimizer_params: global_params.OptimizerParams = OPTIMIZER_PARAMS,
+        optimizer_params,
     ):
         """Get the optimizer for the model.
 
@@ -89,11 +88,11 @@ class Trainer:
         READ: https://stackoverflow.com/questions/70107044/can-i-define-a-method-as-an-attribute
 
         Args:
-            model (models.CustomNeuralNet): [description]
-            optimizer_params (global_params.OptimizerParams): [description]
+            model (models.CustomNeuralNet): The model to optimize.
+            optimizer_params (Dict[str, Any]): The parameters for the optimizer.
 
         Returns:
-            [type]: [description]
+            optimizer (torch.optim.Optimizer): The optimizer for the model.
         """
         return getattr(torch.optim, optimizer_params.optimizer_name)(
             model.parameters(), **optimizer_params.optimizer_params
@@ -102,29 +101,28 @@ class Trainer:
     @staticmethod
     def get_scheduler(
         optimizer: torch.optim,
-        scheduler_params: global_params.SchedulerParams = SCHEDULER_PARAMS,
+        scheduler_params,
     ):
         """Get the scheduler for the optimizer.
 
         Args:
-            optimizer (torch.optim): [description]
-            scheduler_params (global_params.SchedulerParams(), optional): [description]. Defaults to SCHEDULER_PARAMS.scheduler_params.
+            optimizer (torch.optim): The optimizer to use.
+            scheduler_params (global_params.SchedulerParams): The scheduler parameters.
 
         Returns:
-            [type]: [description]
+            scheduler (torch.optim.lr_scheduler): The scheduler.
         """
 
         return getattr(
             torch.optim.lr_scheduler, scheduler_params.scheduler_name
         )(optimizer=optimizer, **scheduler_params.scheduler_params)
 
-    # TODO: Write the type hints properly!
     @staticmethod
     def train_criterion(
         y_true: torch.Tensor,
         y_logits: torch.Tensor,
         batch_size: int,
-        criterion_params: global_params.CriterionParams = CRITERION_PARAMS,
+        criterion_params,
     ):
         """Train Loss Function.
         Note that we can evaluate train and validation fold with different loss functions.
@@ -160,9 +158,7 @@ class Trainer:
 
     @staticmethod
     def valid_criterion(
-        y_true: torch.Tensor,
-        y_logits: torch.Tensor,
-        criterion_params: global_params.CriterionParams = CRITERION_PARAMS,
+        y_true: torch.Tensor, y_logits: torch.Tensor, criterion_params
     ):
         """Validation Loss Function.
 
@@ -180,17 +176,22 @@ class Trainer:
         loss = loss_fn(y_logits, y_true)
         return loss
 
-    @staticmethod
-    def get_sigmoid_softmax() -> Union[torch.nn.Sigmoid, torch.nn.Softmax]:
+    def get_sigmoid_softmax(self) -> Union[torch.nn.Sigmoid, torch.nn.Softmax]:
         """Get the sigmoid or softmax function.
 
         Returns:
             Union[torch.nn.Sigmoid, torch.nn.Softmax]: [description]
         """
-        if CRITERION_PARAMS.train_criterion_name == "BCEWithLogitsLoss":
+        if (
+            self.pipeline_config.criterion_params.train_criterion_name
+            == "BCEWithLogitsLoss"
+        ):
             return getattr(torch.nn, "Sigmoid")()
 
-        if CRITERION_PARAMS.train_criterion_name == "CrossEntropyLoss":
+        if (
+            self.pipeline_config.criterion_params.train_criterion_name
+            == "CrossEntropyLoss"
+        ):
             return getattr(torch.nn, "Softmax")(dim=1)
 
     def get_classification_metrics(
@@ -254,7 +255,7 @@ class Trainer:
         valid_loader: torch.utils.data.DataLoader,
         fold: int = None,
     ):
-        """[summary]
+        """Fit the model.
 
         Args:
             train_loader (torch.utils.data.DataLoader): [description]
@@ -509,7 +510,7 @@ class Trainer:
                     targets,
                     logits,
                     batch_size,
-                    criterion_params=CRITERION_PARAMS,
+                    criterion_params=self.pipeline_config.criterion_params,
                 )
             self.optimizer.zero_grad()  # reset gradients
 
@@ -582,7 +583,9 @@ class Trainer:
                 y_valid_pred = torch.argmax(y_valid_prob, axis=1)
 
                 curr_batch_val_loss = self.valid_criterion(
-                    targets, logits, criterion_params=CRITERION_PARAMS
+                    targets,
+                    logits,
+                    criterion_params=self.pipeline_config.criterion_params,
                 )
 
                 metric_monitor.update(

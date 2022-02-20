@@ -1,15 +1,10 @@
 from typing import Dict, Union
-import albumentations
 
+import albumentations
 import cv2
 import pandas as pd
 import torch
 from config import global_params
-
-
-FOLDS = global_params.MakeFolds()
-TRANSFORMS = global_params.AugmentationParams()
-CRITERION_PARAMS = global_params.CriterionParams()
 
 
 class CustomDataset(torch.utils.data.Dataset):
@@ -18,6 +13,7 @@ class CustomDataset(torch.utils.data.Dataset):
     def __init__(
         self,
         df: pd.DataFrame,
+        pipeline_config: global_params.PipelineConfig,
         transforms: albumentations.core.composition.Compose = None,
         mode: str = "train",
     ):
@@ -29,12 +25,15 @@ class CustomDataset(torch.utils.data.Dataset):
             mode (str, optional): Defaults to "train". One of ['train', 'valid', 'test', 'gradcam']
         """
 
+        self.pipeline_config = pipeline_config
         # "image_path" is hardcoded, as that is always defined in prepare_data.
         self.image_path = df["image_path"].values
-        self.image_ids = df[FOLDS.image_col_name].values
+        self.image_ids = df[self.pipeline_config.folds.image_col_name].values
         self.df = df
         self.targets = (
-            torch.from_numpy(df[FOLDS.class_col_name].values)
+            torch.from_numpy(
+                df[self.pipeline_config.folds.class_col_name].values
+            )
             if mode != "test"
             else None
         )
@@ -51,12 +50,10 @@ class CustomDataset(torch.utils.data.Dataset):
         """Return the length of the dataset."""
         return len(self.df)
 
-    @staticmethod
     def return_dtype(
-        X: torch.Tensor, y: torch.Tensor, original_image: torch.Tensor
+        self, X: torch.Tensor, y: torch.Tensor, original_image: torch.Tensor
     ) -> torch.Tensor:
         """Return the dtype of the dataset.
-
 
         Args:
             X (torch.Tensor): Image tensor.
@@ -75,7 +72,10 @@ class CustomDataset(torch.utils.data.Dataset):
         # then the collated y will be a tensor of shape [4, 1, 1] instead of [4, 1] since it prepends an extra dimension.
         # TODO: Check on RANZCR to see if flatten here works since that is multi-label.
 
-        if CRITERION_PARAMS.train_criterion_name == "BCEWithLogitsLoss":
+        if (
+            self.pipeline_config.criterion_params.train_criterion_name
+            == "BCEWithLogitsLoss"
+        ):
             # Make changes to reshape rather than in Trainer.
             y = torch.as_tensor(y, dtype=torch.float32).flatten()
         else:
@@ -118,7 +118,11 @@ class CustomDataset(torch.utils.data.Dataset):
 
         # needed for gradcam.
         original_image = cv2.resize(
-            image, (TRANSFORMS.image_size, TRANSFORMS.image_size)
+            image,
+            (
+                self.pipeline_config.transforms.image_size,
+                self.pipeline_config.transforms.image_size,
+            ),
         ).copy()
 
         # Get target for all modes except for test, if test, replace target with dummy ones to pass through return_dtype.

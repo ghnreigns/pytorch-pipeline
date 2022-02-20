@@ -18,6 +18,10 @@ models_logger = config.init_logger(
     module_name="models",
 )
 
+# TODO: To check with Ian the best way to put pipeline_config in. The issue is if I put pipeline_config in the constructor
+# then it is not easily modifiable outside. It happens that many places I need to define the model as pretrained=False and
+# having the pipeline object makes it hard to modify.
+
 
 class CustomNeuralNet(torch.nn.Module):
     def __init__(

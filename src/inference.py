@@ -114,7 +114,10 @@ def inference(
     # Loop over each TTA transforms, if TTA is none, then loop once over normal inference_augs.
     for aug_name, aug_param in transform_dict.items():
         test_dataset = dataset.CustomDataset(
-            df=df_test, transforms=aug_param, mode="test"
+            df=df_test,
+            pipeline_config=pipeline_config,
+            transforms=aug_param,
+            mode="test",
         )
         test_loader = torch.utils.data.DataLoader(
             test_dataset, **LOADER_PARAMS.test_loader
