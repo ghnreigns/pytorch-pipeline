@@ -36,11 +36,6 @@ from src import (
 # TODO: Gradient Accum and Mixup code can be referenced from Petfinder.
 
 FILES = global_params.FilePaths()
-FOLDS = global_params.MakeFolds()
-MODEL_PARAMS = global_params.ModelParams()
-LOADER_PARAMS = global_params.DataLoaderParams()
-TRAIN_PARAMS = global_params.GlobalTrainParams()
-WANDB_PARAMS = global_params.WandbParams()
 LOGS_PARAMS = global_params.LogsParams()
 MODEL_ARTIFACTS_PATH = global_params.FilePaths().get_model_artifacts_path()
 
@@ -68,32 +63,33 @@ def download_data():
     main_logger.info("Data downloaded!")
 
 
-def wandb_init(fold: int):
+def wandb_init(fold: int, pipeline_config: global_params.PipelineConfig):
     """Initialize wandb run.
 
     Args:
         fold (int): [description]
+        pipeline_config (global_params.PipelineConfig): The pipeline configuration.
 
     Returns:
         [type]: [description]
     """
     config = {
-        "Train_Params": TRAIN_PARAMS.to_dict(),
-        "Model_Params": MODEL_PARAMS.to_dict(),
-        "Loader_Params": LOADER_PARAMS.to_dict(),
-        "File_Params": FILES.to_dict(),
-        "Wandb_Params": WANDB_PARAMS.to_dict(),
-        "Folds_Params": FOLDS.to_dict(),
-        "Augment_Params": global_params.AugmentationParams().to_dict(),
-        "Criterion_Params": global_params.CriterionParams().to_dict(),
-        "Scheduler_Params": global_params.SchedulerParams().to_dict(),
-        "Optimizer_Params": global_params.OptimizerParams().to_dict(),
+        "Train_Params": pipeline_config.global_train_params.to_dict(),
+        "Model_Params": pipeline_config.model_params.to_dict(),
+        "Loader_Params": pipeline_config.loader_params.to_dict(),
+        "File_Params": pipeline_config.files.to_dict(),
+        "Wandb_Params": pipeline_config.wandb_params.to_dict(),
+        "Folds_Params": pipeline_config.folds.to_dict(),
+        "Augment_Params": pipeline_config.transforms.to_dict(),
+        "Criterion_Params": pipeline_config.criterion_params.to_dict(),
+        "Scheduler_Params": pipeline_config.scheduler_params.to_dict(),
+        "Optimizer_Params": pipeline_config.optimizer_params.to_dict(),
     }
 
     wandb_run = wandb.init(
         config=config,
-        name=f"{TRAIN_PARAMS.model_name}_fold_{fold}",
-        **WANDB_PARAMS.to_dict(),
+        name=f"{pipeline_config.global_train_params.model_name}_fold_{fold}",
+        **pipeline_config.wandb_params.to_dict(),
     )
     return wandb_run
 
@@ -126,18 +122,18 @@ def log_gradcam(
     model.to(device)
     model.eval()
 
-    if "vit" in MODEL_PARAMS.model_name:
+    if "vit" in pipeline_config.model_params.model_name:
         # blocks[-1].norm1  # for vit models use this, note this is using TIMM backbone.
         target_layers = [model.backbone.blocks[-1].norm1]
 
-    elif "efficientnet" in MODEL_PARAMS.model_name:
+    elif "efficientnet" in pipeline_config.model_params.model_name:
         target_layers = [model.backbone.conv_head]
         reshape_transform = None
 
-    elif "resnet" in MODEL_PARAMS.model_name:
+    elif "resnet" in pipeline_config.model_params.model_name:
         target_layers = [model.backbone.layer4[-1]]
 
-    elif "swin" in MODEL_PARAMS.model_name:
+    elif "swin" in pipeline_config.model_params.model_name:
         # https://github.com/jacobgil/pytorch-grad-cam/blob/master/usage_examples/swinT_example.py
         # TODO: Note this does not work for swin 384 as the size is not (7, 7)
         def reshape_transform(tensor, height=7, width=7):
@@ -179,7 +175,8 @@ def log_gradcam(
         original_image = original_image.cpu().detach().numpy() / 255.0
         y_true = y.cpu().detach().numpy()
         y_pred = df_oof.loc[
-            df_oof[FOLDS.image_col_name] == image_id, "oof_preds"
+            df_oof[pipeline_config.folds.image_col_name] == image_id,
+            "oof_preds",
         ].values[0]
 
         assert (
@@ -227,7 +224,7 @@ def train_one_fold(
 
     ################################## W&B #####################################
     # wandb.login()
-    wandb_run = wandb_init(fold=fold)
+    wandb_run = wandb_init(fold=fold, pipeline_config=pipeline_config)
 
     train_loader, valid_loader, df_oof = prepare.prepare_loaders(
         df_folds, fold, pipeline_config=pipeline_config
@@ -275,9 +272,12 @@ def train_one_fold(
     )
 
     # TODO: Note that for sigmoid on one class, the OOF score is the positive class.
-    df_oof[[f"class_{str(c)}_oof" for c in range(TRAIN_PARAMS.num_classes)]] = (
-        curr_fold_best_checkpoint["oof_probs"].detach().numpy()
-    )
+    df_oof[
+        [
+            f"class_{str(c)}_oof"
+            for c in range(pipeline_config.global_train_params.num_classes)
+        ]
+    ] = (curr_fold_best_checkpoint["oof_probs"].detach().numpy())
 
     df_oof["oof_trues"] = curr_fold_best_checkpoint["oof_trues"]
     df_oof["oof_preds"] = curr_fold_best_checkpoint["oof_preds"]
@@ -303,14 +303,16 @@ def train_one_fold(
     return df_oof
 
 
-def train_loop(*args, **kwargs):
+def train_loop(pipeline_config: global_params.PipelineConfig, *args, **kwargs):
     """Perform the training loop on all folds. Here The CV score is the average of the validation fold metric.
     While the OOF score is the aggregation of all validation folds."""
 
     df_oof = pd.DataFrame()
 
-    for fold in range(1, FOLDS.num_folds + 1):
-        _df_oof = train_one_fold(*args, fold=fold, **kwargs)
+    for fold in range(1, pipeline_config.folds.num_folds + 1):
+        _df_oof = train_one_fold(
+            *args, fold=fold, pipeline_config=pipeline_config, **kwargs
+        )
         df_oof = pd.concat([df_oof, _df_oof])
 
         # TODO: populate the cv_score_list using a dataframe like breast cancer project.
@@ -377,12 +379,12 @@ if __name__ == "__main__":
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data(pipeline_config)
 
-    is_inference = True
+    is_inference = False
     if not is_inference:
         # caution turn on is_plot or is_forward_pass etc will not have the same run results vs not turned on since initialized is diff.
         df_oof = train_loop(
-            df_folds=df_folds,
             pipeline_config=pipeline_config,
+            df_folds=df_folds,
             is_plot=False,
             is_forward_pass=True,
             is_gradcam=False,
