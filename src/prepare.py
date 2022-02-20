@@ -8,11 +8,6 @@ from config import global_params
 
 from src import dataset, make_folds, transformation, utils
 
-FILES = global_params.FilePaths()
-FOLDS = global_params.MakeFolds()
-LOADER_PARAMS = global_params.DataLoaderParams()
-TRAIN_PARAMS = global_params.GlobalTrainParams()
-
 
 def return_filepath(
     image_id: str,
@@ -22,8 +17,7 @@ def return_filepath(
     """Add a new column image_path to the train and test csv.
     We can call the images easily in __getitem__ in Dataset.
 
-    We need to be careful if the image_id has extension already.
-    In this case, there is no need to add the extension.
+    If the image_id has extension already, then there is no need to add the extension.
 
     Args:
         image_id (str): The unique image id: 1000015157.jpg
@@ -42,8 +36,8 @@ def prepare_data(pipeline_config: global_params.PipelineConfig) -> pd.DataFrame:
     """Call a sequential number of steps to prepare the data.
 
     Args:
-        image_col_name (str): The column name of the unique image id.
-                        In Cassava, it is "image_id".
+        pipeline_config (global_params.PipelineConfig): The pipeline config.
+        image_col_name (str): The column name of the unique image id. In Cassava, it is "image_id".
 
     Returns:
         df_train (pd.DataFrame): The train dataframe.
@@ -52,9 +46,9 @@ def prepare_data(pipeline_config: global_params.PipelineConfig) -> pd.DataFrame:
         df_sub (pd.DataFrame): The submission dataframe.
     """
 
-    df_train = pd.read_csv(FILES.train_csv)
-    df_test = pd.read_csv(FILES.test_csv)
-    df_sub = pd.read_csv(FILES.sub_csv)
+    df_train = pd.read_csv(pipeline_config.files.train_csv)
+    df_test = pd.read_csv(pipeline_config.files.test_csv)
+    df_sub = pd.read_csv(pipeline_config.files.sub_csv)
 
     df_train["image_path"] = df_train[
         pipeline_config.folds.image_col_name
@@ -74,7 +68,7 @@ def prepare_data(pipeline_config: global_params.PipelineConfig) -> pd.DataFrame:
     )
 
     df_folds = make_folds.make_folds(
-        train_csv=df_train, cv_params=pipeline_config.folds
+        train_csv=df_train, pipeline_config=pipeline_config
     )
 
     return df_train, df_test, df_folds, df_sub
@@ -85,19 +79,28 @@ def prepare_loaders(
     fold: int,
     pipeline_config: global_params.PipelineConfig,
 ) -> Union[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
-    """Prepare Data Loaders."""
-    # TODO: To uncomment random_state after checking.
-    # TODO: Fix debug_multiplier typo
+    """Prepare the train and validation loaders.
+
+    Args:
+        df_folds (pd.DataFrame): The folds dataframe with an additional column "fold".
+        fold (int): The fold number.
+        pipeline_config (global_params.PipelineConfig): The pipeline config.
+
+    Returns:
+        train_loader (torch.utils.data.DataLoader): The train loader.
+        valid_loader (torch.utils.data.DataLoader): The validation loader.
+        oof (pd.DataFrame): The out of fold dataframe which is the same as the validation dataframe before any changes were made.
+    """
     if pipeline_config.global_train_params.debug:
         df_train = df_folds[df_folds["fold"] != fold].sample(
             pipeline_config.loader_params.train_loader["batch_size"]
-            * pipeline_config.global_train_params.debug_multipler,
-            # random_state=FOLDS.seed,
+            * pipeline_config.global_train_params.debug_multiplier,
+            random_state=pipeline_config.folds.seed,
         )
         df_valid = df_folds[df_folds["fold"] == fold].sample(
             pipeline_config.loader_params.train_loader["batch_size"]
-            * pipeline_config.global_train_params.debug_multipler,
-            # random_state=FOLDS.seed,
+            * pipeline_config.global_train_params.debug_multiplier,
+            random_state=pipeline_config.folds.seed,
         )
         # TODO: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sample.html | Consider adding stratified sampling to avoid df_valid having 0 num samples of minority class, causing issues when computing roc.
         df_oof = df_valid.copy()
@@ -109,10 +112,14 @@ def prepare_loaders(
         df_oof = df_valid.copy()
 
     dataset_train = dataset.CustomDataset(
-        df_train, transforms=transformation.get_train_transforms(), mode="train"
+        df_train,
+        transforms=transformation.get_train_transforms(pipeline_config),
+        mode="train",
     )
     dataset_valid = dataset.CustomDataset(
-        df_valid, transforms=transformation.get_valid_transforms(), mode="train"
+        df_valid,
+        transforms=transformation.get_valid_transforms(pipeline_config),
+        mode="train",
     )
 
     # Seeding workers for reproducibility.

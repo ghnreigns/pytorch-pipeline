@@ -233,7 +233,7 @@ class ModelParams:
 @dataclass
 class GlobalTrainParams:
     debug: bool = True
-    debug_multipler: int = 2
+    debug_multiplier: int = 2
     epochs: int = 1  # 1 or 2 when debug
     use_amp: bool = True
     mixup: bool = AugmentationParams().mixup

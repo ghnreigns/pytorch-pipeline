@@ -98,7 +98,12 @@ def wandb_init(fold: int):
     return wandb_run
 
 
-def log_gradcam(curr_fold_best_checkpoint, df_oof, plot_gradcam: bool = True):
+def log_gradcam(
+    curr_fold_best_checkpoint,
+    df_oof,
+    pipeline_config: global_params.PipelineConfig,
+    plot_gradcam: bool = True,
+):
     """Log gradcam images into wandb for error analysis.
     # TODO: Consider getting the logits for error analysis, for example, if a predicted image which is correct has high logits this means the model is very sure, conversely, if a predicted image has low logits and also wrong, we also check why.
     """
@@ -150,7 +155,7 @@ def log_gradcam(curr_fold_best_checkpoint, df_oof, plot_gradcam: bool = True):
     # load gradcam_dataset
     gradcam_dataset = dataset.CustomDataset(
         df=df_oof,
-        transforms=transformation.get_gradcam_transforms(),
+        transforms=transformation.get_gradcam_transforms(pipeline_config),
         mode="gradcam",
     )
     count = 0
@@ -284,6 +289,7 @@ def train_one_fold(
         gradcam_table = log_gradcam(
             curr_fold_best_checkpoint=curr_fold_best_checkpoint,
             df_oof=df_oof,
+            pipeline_config=pipeline_config,
             plot_gradcam=False,
         )
 
@@ -449,6 +455,7 @@ if __name__ == "__main__":
         scheduler_params=SCHEDULER_PARAMS,
         optimizer_params=OPTIMIZER_PARAMS,
     )
+
     # @Step 1: Download and load data.
     df_train, df_test, df_folds, df_sub = prepare.prepare_data(pipeline_config)
 
@@ -480,7 +487,9 @@ if __name__ == "__main__":
             in_channels=3,
             pretrained=False,
         ).to(device)
-        transform_dict = transformation.get_inference_transforms()
+        transform_dict = transformation.get_inference_transforms(
+            pipeline_config
+        )
         predictions = inference.inference(
             df_test=df_test,
             model_dir=model_dir,

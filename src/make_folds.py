@@ -6,10 +6,23 @@ from sklearn.model_selection import GroupKFold, StratifiedKFold
 
 
 def make_folds(
-    train_csv: pd.DataFrame, cv_params: global_params.MakeFolds()
+    train_csv: pd.DataFrame,
+    pipeline_config: global_params.PipelineConfig,
 ) -> pd.DataFrame:
-    """Split the given dataframe into training folds."""
+    """Split the given dataframe into training folds.
 
+    Note that sklearn now has StratifiedGroupKFold!
+
+    Args:
+        train_csv (pd.DataFrame): The train dataframe.
+        pipeline_config (global_params.PipelineConfig): The pipeline config.
+        cv_params (pipeline_config.folds): The cross validation parameters.
+
+    Returns:
+        df_folds (pd.DataFrame): The folds dataframe with an additional column "fold".
+    """
+
+    cv_params = pipeline_config.folds
     if cv_params.cv_schema == "StratifiedKFold":
         df_folds = train_csv.copy()
         skf = StratifiedKFold(
