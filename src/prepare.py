@@ -14,6 +14,29 @@ LOADER_PARAMS = global_params.DataLoaderParams()
 TRAIN_PARAMS = global_params.GlobalTrainParams()
 
 
+# def return_filepathv2(
+#     image_id: str,
+#     folder: Path,
+#     extension: str,
+# ) -> str:
+#     """Add a new column image_path to the train and test csv.
+#     We can call the images easily in __getitem__ in Dataset.
+
+#     We need to be careful if the image_id has extension already.
+#     In this case, there is no need to add the extension.
+
+#     Args:
+#         image_id (str): The unique image id: 1000015157.jpg
+#         folder (Path, optional): The train folder. Defaults to FILES().train_images.
+
+#     Returns:
+#         image_path (str): The path to the image: "c:\\users\\reighns\\kaggle_projects\\cassava\\data\\train\\1000015157.jpg"
+#     """
+#     # TODO: Consider using Path instead os for consistency.
+#     image_path = os.path.join(folder, f"{image_id}{extension}")
+#     return image_path
+
+
 def return_filepath(
     image_id: str,
     folder: Path = FILES.train_images,

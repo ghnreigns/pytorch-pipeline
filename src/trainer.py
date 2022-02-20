@@ -29,6 +29,57 @@ training_logger = config.init_logger(
 #       - usually logits is the direct output of a model, then apply sigmoid or softmax to get the probability probs, lastly apply argmax to get the class preds.
 
 
+# class Trainerv2:
+#     """Object used to facilitate training."""
+
+#     def __init__(
+#         self,
+#         pipeline_config: config.PipelineConfig,
+#         model: models.CustomNeuralNet,
+#         model_artifacts_path: Union[str, Path],
+#         device=torch.device("cpu"),
+#         wandb_run=None,
+#         early_stopping: callbacks.EarlyStopping = None,
+#     ):
+#         # Set params
+#         self.pipeline_config = pipeline_config
+#         self.model = model
+#         self.model_path = model_artifacts_path
+#         self.device = device
+
+#         self.wandb_run = wandb_run
+#         self.early_stopping = early_stopping
+
+#         # TODO: To ask Ian if initializing the optimizer in constructor is a good idea? Should we init it outside of the class like most people do? In particular, the memory usage.
+#         self.optimizer = self.get_optimizer(
+#             model=self.model,
+#             optimizer_params=self.pipeline_config.optimizer_params,
+#         )
+#         self.scheduler = self.get_scheduler(
+#             optimizer=self.optimizer, scheduler_params=SCHEDULER_PARAMS
+#         )
+
+#         if self.params.use_amp:
+#             # https://pytorch.org/docs/stable/notes/amp_examples.html
+#             self.scaler = torch.cuda.amp.GradScaler()
+#         else:
+#             self.scaler = None
+
+#         # list to contain various train metrics
+#         # TODO: how to add more metrics? wandb log too. Maybe save to model artifacts?
+#         self.monitored_metric = {
+#             "metric_name": "valid_macro_auroc",
+#             "metric_score": None,
+#             "mode": "max",
+#         }
+#         # Metric to optimize, either min or max.
+#         self.best_valid_score = (
+#             -np.inf if self.monitored_metric["mode"] == "max" else np.inf
+#         )
+#         self.patience_counter = self.params.patience  # Early Stopping Counter
+#         self.history = DefaultDict(list)
+
+
 class Trainer:
     """Object used to facilitate training."""
 

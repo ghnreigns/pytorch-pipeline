@@ -4,6 +4,7 @@ import warnings
 from pathlib import Path
 from typing import Optional
 import sys
+from config import global_params
 
 # import pretty_errors  # NOQA: F401 (imported but unused)
 # from rich.logging import RichHandler
@@ -109,3 +110,37 @@ def init_logger(
 
 # TODO: TO use logger for multiple modules, now only writing to `info.log`.
 # logger = init_logger()
+
+
+class PipelineConfig:
+    model_params: global_params.ModelParams
+    global_train_params: global_params.GlobalTrainParams
+    files: global_params.FilePaths
+    folds: global_params.MakeFolds
+    loader_params: global_params.DataLoaderParams
+    wandb_params: global_params.WandbParams
+    logs_params: global_params.LogsParams
+    transforms: global_params.AugmentationParams
+    optimizer_params: global_params.OptimizerParams
+
+    def __init__(
+        self,
+        model_params,
+        global_train_params,
+        files,
+        folds,
+        loader_params,
+        wandb_params,
+        logs_params,
+        transforms,
+        optimizer_params,
+    ):
+        self.model_params = model_params
+        self.global_train_params = global_train_params
+        self.files = files
+        self.folds = folds
+        self.loader_params = loader_params
+        self.wandb_params = wandb_params
+        self.logs_params = logs_params
+        self.transforms = transforms
+        self.optimizer_params = optimizer_params

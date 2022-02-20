@@ -317,6 +317,105 @@ def train_loop(*args, **kwargs):
     return df_oof
 
 
+# class Pipeline:
+#     def __init__(
+#         self,
+#         pipeline_config: config.PipelineConfig,
+#     ):
+#         self.pipeline_config = pipeline_config
+
+#     def train_one_fold(
+#         self,
+#         df_folds: pd.DataFrame,
+#         fold: int,
+#         is_plot: bool = False,
+#         is_forward_pass: bool = True,
+#         is_gradcam: bool = True,
+#         is_find_lr: bool = False,
+#     ):
+#         """Train the model on the given fold."""
+
+#         ################################## W&B #####################################
+#         # wandb.login()
+#         wandb_run = wandb_init(fold=fold)
+
+#         train_loader, valid_loader, df_oof = prepare.prepare_loaders(
+#             df_folds, fold
+#         )
+
+#         if is_plot:
+#             image_grid = plot.show_image(
+#                 loader=train_loader,
+#                 mean=[0.485, 0.456, 0.406],
+#                 std=[0.229, 0.224, 0.225],
+#                 one_channel=False,
+#             )
+
+#             images = wandb.Image(
+#                 np.transpose(image_grid, (1, 2, 0)),
+#                 caption="Top: Output, Bottom: Input",
+#             )
+#             wandb.log({"examples": images})
+
+#         # Model, cost function and optimizer instancing
+#         model = models.CustomNeuralNet().to(device)
+
+#         if is_forward_pass:
+#             # Forward Sanity Check
+#             # TODO: https://discuss.pytorch.org/t/why-cannot-i-call-dataloader-or-model-object-twice/137761
+#             # Find out why this will change model behaviour, use with caution, or maybe just put it outside this function for safety.
+#             _forward_X, _forward_y = models.forward_pass(
+#                 loader=train_loader, model=model
+#             )
+#         if is_find_lr:
+#             lr_finder.find_lr(
+#                 model, device, train_loader, valid_loader, use_valid=False
+#             )
+
+#         reighns_trainer: trainer.Trainer = trainer.Trainer(
+#             params=TRAIN_PARAMS,
+#             model=model,
+#             model_artifacts_path=MODEL_ARTIFACTS_PATH,
+#             device=device,
+#             wandb_run=wandb_run,
+#         )
+
+#         curr_fold_best_checkpoint = reighns_trainer.fit(
+#             train_loader, valid_loader, fold
+#         )
+
+#         # TODO: Note that for sigmoid on one class, the OOF score is the positive class.
+#         df_oof[
+#             [f"class_{str(c)}_oof" for c in range(TRAIN_PARAMS.num_classes)]
+#         ] = (curr_fold_best_checkpoint["oof_probs"].detach().numpy())
+
+#         df_oof["oof_trues"] = curr_fold_best_checkpoint["oof_trues"]
+#         df_oof["oof_preds"] = curr_fold_best_checkpoint["oof_preds"]
+
+#         df_oof.to_csv(
+#             Path(MODEL_ARTIFACTS_PATH, f"oof_fold_{fold}.csv"), index=False
+#         )
+#         if is_gradcam:
+#             # TODO: df_oof['error_analysis'] = todo - error analysis by ranking prediction confidence and plot gradcam for top 10 and bottom 10.
+#             gradcam_table = log_gradcam(
+#                 curr_fold_best_checkpoint=curr_fold_best_checkpoint,
+#                 df_oof=df_oof,
+#                 plot_gradcam=False,
+#             )
+
+#             wandb_run.log({"gradcam_table": gradcam_table})
+#             utils.free_gpu_memory(gradcam_table)
+
+#         utils.free_gpu_memory(model)
+#         wandb_run.finish()  # Finish the run to start next fold.
+
+#         return df_oof
+
+#     # def run():
+#     #     """Run Typer application for pipeline."""
+#     #     app = typer.App()
+
+
 if __name__ == "__main__":
     utils.seed_all()
 
@@ -329,7 +428,7 @@ if __name__ == "__main__":
         df_oof = train_loop(
             df_folds=df_folds,
             is_plot=False,
-            is_forward_pass=True,
+            is_forward_pass=False,
             is_gradcam=False,
             is_find_lr=False,
         )
