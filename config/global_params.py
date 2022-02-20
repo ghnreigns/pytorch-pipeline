@@ -232,9 +232,9 @@ class ModelParams:
 
 @dataclass
 class GlobalTrainParams:
-    debug: bool = False
+    debug: bool = True
     debug_multipler: int = 2
-    epochs: int = 10  # 1 or 2 when debug
+    epochs: int = 1  # 1 or 2 when debug
     use_amp: bool = True
     mixup: bool = AugmentationParams().mixup
     patience: int = 10
@@ -339,3 +339,45 @@ class LogsParams:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         return asdict(self)
+
+
+class PipelineConfig:
+
+    files: FilePaths
+    loader_params: DataLoaderParams
+    folds: MakeFolds
+    transforms: AugmentationParams
+    criterion_params: CriterionParams
+    model_params: ModelParams
+    global_train_params: GlobalTrainParams
+    optimizer_params: OptimizerParams
+    scheduler_params: SchedulerParams
+    wandb_params: WandbParams
+    logs_params: LogsParams
+
+    def __init__(
+        self,
+        files,
+        loader_params,
+        folds,
+        transforms,
+        criterion_params,
+        model_params,
+        global_train_params,
+        optimizer_params,
+        scheduler_params,
+        wandb_params,
+        logs_params,
+    ):
+
+        self.files = files
+        self.loader_params = loader_params
+        self.folds = folds
+        self.transforms = transforms
+        self.criterion_params = criterion_params
+        self.model_params = model_params
+        self.global_train_params = global_train_params
+        self.optimizer_params = optimizer_params
+        self.scheduler_params = scheduler_params
+        self.wandb_params = wandb_params
+        self.logs_params = logs_params

@@ -16,8 +16,8 @@ TRAIN_PARAMS = global_params.GlobalTrainParams()
 
 def return_filepath(
     image_id: str,
-    folder: Path = FILES.train_images,
-    extension: str = FOLDS.image_extension,
+    folder: Path,
+    extension: str,
 ) -> str:
     """Add a new column image_path to the train and test csv.
     We can call the images easily in __getitem__ in Dataset.
@@ -28,6 +28,7 @@ def return_filepath(
     Args:
         image_id (str): The unique image id: 1000015157.jpg
         folder (Path, optional): The train folder. Defaults to FILES().train_images.
+        extension (str, optional): The extension of the image. Defaults to ".jpg".
 
     Returns:
         image_path (str): The path to the image: "c:\\users\\reighns\\kaggle_projects\\cassava\\data\\train\\1000015157.jpg"
@@ -37,9 +38,7 @@ def return_filepath(
     return image_path
 
 
-def prepare_data(
-    image_col_name: str = FOLDS.image_col_name,
-) -> pd.DataFrame:
+def prepare_data(pipeline_config: global_params.PipelineConfig) -> pd.DataFrame:
     """Call a sequential number of steps to prepare the data.
 
     Args:
@@ -57,14 +56,26 @@ def prepare_data(
     df_test = pd.read_csv(FILES.test_csv)
     df_sub = pd.read_csv(FILES.sub_csv)
 
-    df_train["image_path"] = df_train[image_col_name].apply(
-        lambda x: return_filepath(image_id=x, folder=FILES.train_images)
+    df_train["image_path"] = df_train[
+        pipeline_config.folds.image_col_name
+    ].apply(
+        lambda x: return_filepath(
+            image_id=x,
+            folder=pipeline_config.files.train_images,
+            extension=pipeline_config.folds.image_extension,
+        )
     )
-    df_test["image_path"] = df_test[image_col_name].apply(
-        lambda x: return_filepath(x, folder=FILES.test_images)
+    df_test["image_path"] = df_test[pipeline_config.folds.image_col_name].apply(
+        lambda x: return_filepath(
+            x,
+            folder=pipeline_config.files.test_images,
+            extension=pipeline_config.folds.image_extension,
+        )
     )
 
-    df_folds = make_folds.make_folds(train_csv=df_train, cv_params=FOLDS)
+    df_folds = make_folds.make_folds(
+        train_csv=df_train, cv_params=pipeline_config.folds
+    )
 
     return df_train, df_test, df_folds, df_sub
 
@@ -72,24 +83,25 @@ def prepare_data(
 def prepare_loaders(
     df_folds: pd.DataFrame,
     fold: int,
+    pipeline_config: global_params.PipelineConfig,
 ) -> Union[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """Prepare Data Loaders."""
     # TODO: To uncomment random_state after checking.
     # TODO: Fix debug_multiplier typo
-    if TRAIN_PARAMS.debug:
+    if pipeline_config.global_train_params.debug:
         df_train = df_folds[df_folds["fold"] != fold].sample(
-            LOADER_PARAMS.train_loader["batch_size"]
-            * TRAIN_PARAMS.debug_multipler,
+            pipeline_config.loader_params.train_loader["batch_size"]
+            * pipeline_config.global_train_params.debug_multipler,
             # random_state=FOLDS.seed,
         )
         df_valid = df_folds[df_folds["fold"] == fold].sample(
-            LOADER_PARAMS.train_loader["batch_size"]
-            * TRAIN_PARAMS.debug_multipler,
+            pipeline_config.loader_params.train_loader["batch_size"]
+            * pipeline_config.global_train_params.debug_multipler,
             # random_state=FOLDS.seed,
         )
         # TODO: https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.sample.html | Consider adding stratified sampling to avoid df_valid having 0 num samples of minority class, causing issues when computing roc.
-
         df_oof = df_valid.copy()
+
     else:
         df_train = df_folds[df_folds["fold"] != fold].reset_index(drop=True)
         df_valid = df_folds[df_folds["fold"] == fold].reset_index(drop=True)
@@ -109,13 +121,13 @@ def prepare_loaders(
 
     train_loader = torch.utils.data.DataLoader(
         dataset_train,
-        **LOADER_PARAMS.train_loader,
+        **pipeline_config.loader_params.train_loader,
         worker_init_fn=utils.seed_worker,
         generator=g,
     )
     valid_loader = torch.utils.data.DataLoader(
         dataset_valid,
-        **LOADER_PARAMS.valid_loader,
+        **pipeline_config.loader_params.valid_loader,
         worker_init_fn=utils.seed_worker,
         generator=g,
     )
