@@ -130,9 +130,12 @@ def log_gradcam(
         target_layers = [model.backbone.conv_head]
         reshape_transform = None
 
-    elif "resnet" in pipeline_config.model_params.model_name:
+    elif (
+        "resnet" in pipeline_config.model_params.model_name
+        or "resnext" in pipeline_config.model_params.model_name
+    ):
         target_layers = [model.backbone.layer4[-1]]
-
+        reshape_transform = None
     elif "swin" in pipeline_config.model_params.model_name:
         # https://github.com/jacobgil/pytorch-grad-cam/blob/master/usage_examples/swinT_example.py
         # TODO: Note this does not work for swin 384 as the size is not (7, 7)
@@ -387,7 +390,7 @@ if __name__ == "__main__":
             df_folds=df_folds,
             is_plot=False,
             is_forward_pass=True,
-            is_gradcam=False,
+            is_gradcam=True,
             is_find_lr=False,
         )
 

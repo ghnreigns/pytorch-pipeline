@@ -1,0 +1,100 @@
+2022-02-21 17:26:24: 
+Training on Fold 1 and using resnext50_32x4d
+
+2022-02-21 17:26:25: 
+[RESULT]: Train. Epoch 1:
+Avg Train Summary Loss: 1.667                
+Learning Rate: 0.00010
+Time Elapsed: 00:00:01
+
+2022-02-21 17:26:26: 
+[RESULT]: Validation. Epoch 1
+Avg Val Summary Loss: 1.623                
+Avg Val Accuracy: 0.188
+Avg Val Macro AUROC: 0.279                
+Time Elapsed: 00:00:00
+
+2022-02-21 17:26:26: 
+Validation valid_macro_auroc improved from -inf to 0.1875
+2022-02-21 17:26:27: 
+Saving model with best valid valid_macro_auroc score: 0.1875
+2022-02-21 17:27:33: 
+Training on Fold 2 and using resnext50_32x4d
+
+2022-02-21 17:27:34: 
+[RESULT]: Train. Epoch 1:
+Avg Train Summary Loss: 1.524                
+Learning Rate: 0.00010
+Time Elapsed: 00:00:01
+
+2022-02-21 17:27:36: 
+[RESULT]: Validation. Epoch 1
+Avg Val Summary Loss: 1.480                
+Avg Val Accuracy: 0.562
+Avg Val Macro AUROC: 0.397                
+Time Elapsed: 00:00:01
+
+2022-02-21 17:27:36: 
+Validation valid_macro_auroc improved from -inf to 0.5625
+2022-02-21 17:27:37: 
+Saving model with best valid valid_macro_auroc score: 0.5625
+2022-02-21 17:28:42: 
+Training on Fold 3 and using resnext50_32x4d
+
+2022-02-21 17:28:43: 
+[RESULT]: Train. Epoch 1:
+Avg Train Summary Loss: 1.516                
+Learning Rate: 0.00010
+Time Elapsed: 00:00:01
+
+2022-02-21 17:28:44: 
+[RESULT]: Validation. Epoch 1
+Avg Val Summary Loss: 1.404                
+Avg Val Accuracy: 0.688
+Avg Val Macro AUROC: 0.351                
+Time Elapsed: 00:00:00
+
+2022-02-21 17:28:44: 
+Validation valid_macro_auroc improved from -inf to 0.6875
+2022-02-21 17:28:44: 
+Saving model with best valid valid_macro_auroc score: 0.6875
+2022-02-21 17:29:48: 
+Training on Fold 4 and using resnext50_32x4d
+
+2022-02-21 17:29:50: 
+[RESULT]: Train. Epoch 1:
+Avg Train Summary Loss: 1.545                
+Learning Rate: 0.00010
+Time Elapsed: 00:00:01
+
+2022-02-21 17:29:50: 
+[RESULT]: Validation. Epoch 1
+Avg Val Summary Loss: 1.485                
+Avg Val Accuracy: 0.500
+Avg Val Macro AUROC: 0.485                
+Time Elapsed: 00:00:00
+
+2022-02-21 17:29:50: 
+Validation valid_macro_auroc improved from -inf to 0.5
+2022-02-21 17:29:51: 
+Saving model with best valid valid_macro_auroc score: 0.5
+2022-02-21 17:31:13: 
+Training on Fold 5 and using resnext50_32x4d
+
+2022-02-21 17:31:14: 
+[RESULT]: Train. Epoch 1:
+Avg Train Summary Loss: 1.575                
+Learning Rate: 0.00010
+Time Elapsed: 00:00:01
+
+2022-02-21 17:31:15: 
+[RESULT]: Validation. Epoch 1
+Avg Val Summary Loss: 1.474                
+Avg Val Accuracy: 0.562
+Avg Val Macro AUROC: 0.465                
+Time Elapsed: 00:00:00
+
+2022-02-21 17:31:15: 
+Validation valid_macro_auroc improved from -inf to 0.5625
+2022-02-21 17:31:16: 
+Saving model with best valid valid_macro_auroc score: 0.5625
